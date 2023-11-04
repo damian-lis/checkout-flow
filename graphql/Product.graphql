@@ -1,0 +1,6 @@
+query Product($id: ID, $slug: String, $externalReference: String, $channel: String) {
+  product(id: $id, slug: $slug, externalReference: $externalReference, channel: $channel) {
+    id
+    name
+  }
+}

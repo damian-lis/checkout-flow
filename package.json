@@ -1,0 +1,40 @@
+{
+  "name": "checkout-flow",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm run codegen && next dev",
+    "build": "npm run codegen && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "codegen": "graphql-codegen --require dotenv/config --config codegen.ts",
+    "autofix": "eslint --fix './{app,lib,components}/**/*.{ts,tsx}'",
+    "prepare": "husky install && husky add .husky/pre-commit 'npm run lint'"
+  },
+  "dependencies": {
+    "@apollo/client": "^3.8.6",
+    "@apollo/experimental-nextjs-app-support": "^0.5.0",
+    "graphql": "^16.8.1",
+    "next": "13.5.6",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "@graphql-codegen/cli": "^5.0.0",
+    "@graphql-codegen/client-preset": "^4.1.0",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10",
+    "dotenv": "^16.3.1",
+    "eslint": "^8",
+    "eslint-config-next": "13.5.6",
+    "eslint-plugin-simple-import-sort": "^10.0.0",
+    "husky": "^8.0.0",
+    "postcss": "^8",
+    "prettier": "^3.0.3",
+    "prettier-plugin-tailwindcss": "^0.5.6",
+    "tailwindcss": "^3",
+    "typescript": "^5"
+  }
+}
