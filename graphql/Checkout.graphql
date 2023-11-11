@@ -1,0 +1,19 @@
+query Checkout($id: ID, $token: UUID) {
+  checkout(id: $id, token: $token) {
+    id
+    token
+    lines {
+      id
+      variant {
+        name
+      }
+      quantity
+    }
+    totalPrice {
+      gross {
+        currency
+        amount
+      }
+    }
+  }
+}

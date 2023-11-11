@@ -1,2 +1,2 @@
-export * from "./ClientComponent";
-export * from "./ServerComponent";
+export * from "./Button";
+export * from "./Spinner";
