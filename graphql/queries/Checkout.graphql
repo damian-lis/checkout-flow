@@ -1,0 +1,14 @@
+fragment CheckoutFields on Checkout {
+  id
+  email
+  metadata {
+    key
+    value
+  }
+}
+
+query Checkout($id: ID, $token: UUID) {
+  checkout(id: $id, token: $token) {
+    ...CheckoutFields
+  }
+}

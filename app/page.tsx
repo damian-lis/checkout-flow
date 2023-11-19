@@ -12,13 +12,12 @@ export default function Home() {
   const [createCheckout, { data, loading, error }] = useMutation(CheckoutCreateDocument);
   const router = useRouter();
 
-  const checkoutToken = data?.checkoutCreate?.checkout?.token;
-  const checkoutCreating = !error && (!!checkoutToken || loading);
+  const checkoutId = data?.checkoutCreate?.checkout?.id;
+  const checkoutCreating = !error && (!!checkoutId || loading);
 
   const handleCheckoutCreate = () => {
     createCheckout({
       variables: {
-        email: "damian.lis@mirumee.com",
         channel: DEFAULT_CHANNEL,
         lines: [{ quantity: 1, variantId: "UHJvZHVjdFZhcmlhbnQ6Mzg0" }],
       },
@@ -38,13 +37,13 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (!checkoutToken) return;
-    router.push(`/checkout/${checkoutToken}`);
-  }, [data, router, checkoutToken]);
+    if (!checkoutId) return;
+    router.push(`/checkout/${checkoutId}`);
+  }, [data, router, checkoutId]);
 
   return (
-    <main className="flex h-screen items-center justify-center px-4">
-      <Button loading={checkoutCreating} disabled={checkoutCreating} onClick={handleCheckoutCreate}>
+    <main className="flex h-screen items-center justify-center">
+      <Button size="big" loading={checkoutCreating} disabled={checkoutCreating} onClick={handleCheckoutCreate}>
         Create checkout and add product
       </Button>
     </main>
