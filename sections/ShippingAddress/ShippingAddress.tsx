@@ -17,7 +17,7 @@ import {
 } from "@/generated/graphql";
 
 import { Button, Input, Option, Select } from "../../components";
-import { createSchema, FormValues, mappedFieldsForAutocompletion } from "./schema";
+import { createSchema, FormFields, FormSchema, mappedFieldsForAutocompletion } from "./schema";
 
 interface ShippingAddressProps {
   checkoutData: Checkout;
@@ -36,12 +36,9 @@ export const ShippingAddress = ({ checkoutData }: ShippingAddressProps) => {
         const errorMessage = data?.checkoutShippingAddressUpdate?.errors[0]?.message;
 
         if (errorField) {
-          methods.setError(
-            mappedFieldsForAutocompletion[errorField], // TODO: to change;
-            {
-              message: errorMessage || undefined,
-            }
-          );
+          methods.setError(mappedFieldsForAutocompletion[errorField as FormFields], {
+            message: errorMessage || undefined,
+          });
           return;
         }
 
@@ -83,9 +80,9 @@ export const ShippingAddress = ({ checkoutData }: ShippingAddressProps) => {
         checkoutData.shippingAddress?.metadata?.find(({ key }) => key === "countryArea")?.value,
     }),
     [checkoutData]
-  ) as any; // TODO to change
+  ) as FormSchema;
 
-  const methods = useForm<FormValues>({
+  const methods = useForm<FormSchema>({
     resolver: zodResolver(createSchema(validationRules)),
     mode: "onChange",
     defaultValues: shippingAddress,
@@ -121,7 +118,7 @@ export const ShippingAddress = ({ checkoutData }: ShippingAddressProps) => {
     setIsOpen(isContactDetailsSectionCompleted && !isShippingAddressSectionCompleted);
   }, [isContactDetailsSectionCompleted, isShippingAddressSectionCompleted]);
 
-  const onSubmit = (address: FormValues) => {
+  const onSubmit = (address: FormSchema) => {
     const { streetNumber, ...restAddress } = convertAddressToSend(address);
     updateShippingAddress({
       variables: {
@@ -301,30 +298,19 @@ export const ShippingAddress = ({ checkoutData }: ShippingAddressProps) => {
   );
 };
 
-type InvertedMappedFields = {
-  [K in keyof typeof mappedFieldsForAutocompletion as (typeof mappedFieldsForAutocompletion)[K]]: K;
-};
-
 export const mappedFieldsFromAutocompletion = Object.entries(mappedFieldsForAutocompletion).reduce(
   (acc, [key, value]) => {
-    acc[value] = key; // TODO to change
+    acc[value] = key;
     return acc;
   },
-  {} as InvertedMappedFields
+  {} as any // TODO to change
 );
 
-type MappedFieldsFromAutocompletion = typeof mappedFieldsFromAutocompletion;
-type AutocompletionFieldKeys = keyof MappedFieldsFromAutocompletion;
-
-type FormValuesToSend = {
-  [K in MappedFieldsFromAutocompletion[AutocompletionFieldKeys]]: K extends "streetNumber" ? number : string;
-};
-
-const convertAddressToSend = (address: FormValues) =>
+const convertAddressToSend = (address: FormSchema) =>
   Object.entries(address).reduce((acc, curr) => {
-    const field = curr[0] as AutocompletionFieldKeys;
+    const field = curr[0];
     const value = curr[1];
 
-    acc[mappedFieldsFromAutocompletion[field]] = value; // TODO to change
+    acc[mappedFieldsFromAutocompletion[field]] = String(value);
     return acc;
-  }, {} as FormValuesToSend);
+  }, {} as any); // TODO to change

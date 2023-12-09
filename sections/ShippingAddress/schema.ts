@@ -2,7 +2,19 @@ import { z } from "zod";
 
 import { AddressValidationRulesQuery } from "@/generated/graphql";
 
-export const mappedFieldsForAutocompletion = {
+type MappedFormFieldsToAutocomplete = {
+  firstName: "given-name";
+  lastName: "family-name";
+  companyName: "organization";
+  postalCode: "postal-code";
+  streetAddress1: "street-address";
+  streetNumber: "address-line1";
+  city: "address-level2";
+  country: "country";
+  countryArea: "address-level1";
+};
+
+export const mappedFieldsForAutocompletion: MappedFormFieldsToAutocomplete = {
   firstName: "given-name",
   lastName: "family-name",
   companyName: "organization",
@@ -13,6 +25,9 @@ export const mappedFieldsForAutocompletion = {
   country: "country",
   countryArea: "address-level1",
 };
+
+export type FormFields = keyof MappedFormFieldsToAutocomplete;
+export type AutocompleteFormFields = MappedFormFieldsToAutocomplete[FormFields];
 
 const mappedFieldsToDisplay: Record<string, string> = {
   city: "City",
@@ -41,10 +56,10 @@ export const createSchema = (validationRules?: AddressValidationRulesQuery) => {
   if (rules) {
     rules.requiredFields.forEach(field => {
       schema = schema.extend({
-        [mappedFieldsForAutocompletion[field]]: z
+        [mappedFieldsForAutocompletion[field as FormFields]]: z
           .string()
           .min(1, `${mappedFieldsToDisplay[field] || field} is required`),
-      }) as any; // TODO: to change
+      }) as any; // TODO: to change;
 
       if (field === "streetAddress1") {
         schema = schema.extend({
@@ -59,7 +74,7 @@ export const createSchema = (validationRules?: AddressValidationRulesQuery) => {
     rules.allowedFields.forEach(field => {
       if (!rules.requiredFields.includes(field)) {
         schema = schema.extend({
-          [mappedFieldsForAutocompletion[field]]: z.string().optional(),
+          [mappedFieldsForAutocompletion[field as FormFields]]: z.string().optional(),
         }) as any; // TODO: to change
       }
     });
@@ -79,4 +94,4 @@ export const createSchema = (validationRules?: AddressValidationRulesQuery) => {
   return schema;
 };
 
-export type FormValues = z.infer<ReturnType<typeof createSchema>>;
+export type FormSchema = z.infer<ReturnType<typeof createSchema>>;
