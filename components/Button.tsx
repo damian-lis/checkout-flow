@@ -7,18 +7,20 @@ type Size = "small" | "big";
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
   size?: Size;
+  fullWidth?: boolean;
 }
 
-export const Button: React.FC<ButtonProps> = ({ loading, disabled, size = "small", children, ...props }) => (
+export const Button: React.FC<ButtonProps> = ({ loading, disabled, size = "small", fullWidth, children, ...props }) => (
   <button
     {...props}
     disabled={disabled || loading}
     className={classNames(
-      "enabled:hover:bg-darkGray relative rounded-md bg-black font-normal text-white focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 disabled:opacity-50",
+      "relative rounded-md bg-black font-normal text-white focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 enabled:hover:bg-darkGray disabled:opacity-50",
       {
         "cursor-default bg-opacity-90 hover:bg-opacity-90": loading,
         "p-3 text-xs": size === "small",
         "px-4 py-2 text-[18px] sm:rounded-xl sm:px-20 sm:py-4 sm:text-3xl": size === "big",
+        "w-full": fullWidth,
       }
     )}
   >
@@ -31,7 +33,7 @@ const ButtonSpinner = ({ size }: { size: Size }) => (
   <div role="status" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform">
     <svg
       aria-hidden="true"
-      className={classNames("dark:fill-darkGray dark:lightGray fill-darkGray text-lightGray animate-spin", {
+      className={classNames("dark:lightGray animate-spin fill-darkGray text-lightGray dark:fill-darkGray", {
         "h-6 w-6 sm:h-10 sm:w-10": size === "big",
         "h-7 w-7": size === "small",
       })}
