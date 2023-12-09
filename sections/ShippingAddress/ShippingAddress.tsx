@@ -32,13 +32,16 @@ export const ShippingAddress = ({ checkoutData }: ShippingAddressProps) => {
     CheckoutShippingAddressUpdateDocument,
     {
       onCompleted: data => {
-        const errorField = mappedFieldsForAutocompletion[data?.checkoutShippingAddressUpdate?.errors[0]?.field]; // TODO: to change;
-        const errorMessage = data?.checkoutShippingAddressUpdate?.errors[0]?.message || undefined;
+        const errorField = data?.checkoutShippingAddressUpdate?.errors[0]?.field;
+        const errorMessage = data?.checkoutShippingAddressUpdate?.errors[0]?.message;
 
         if (errorField) {
-          methods.setError(errorField, {
-            message: errorMessage,
-          });
+          methods.setError(
+            mappedFieldsForAutocompletion[errorField], // TODO: to change;
+            {
+              message: errorMessage || undefined,
+            }
+          );
           return;
         }
 
