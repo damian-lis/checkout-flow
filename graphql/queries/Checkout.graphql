@@ -1,14 +1,33 @@
-fragment CheckoutFields on Checkout {
-  id
-  email
-  metadata {
-    key
-    value
-  }
-}
-
 query Checkout($id: ID, $token: UUID) {
   checkout(id: $id, token: $token) {
-    ...CheckoutFields
+    id
+    email
+    metadata {
+      key
+      value
+    }
+    channel {
+      countries {
+        code
+        country
+      }
+    }
+    shippingAddress {
+      firstName
+      lastName
+      companyName
+      streetAddress1
+      metadata {
+        key
+        value
+      }
+      city
+      postalCode
+      country {
+        code
+        country
+      }
+      countryArea
+    }
   }
 }

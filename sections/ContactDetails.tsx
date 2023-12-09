@@ -1,19 +1,14 @@
 "use client";
-import { useLazyQuery, useMutation } from "@apollo/client";
+import { useMutation } from "@apollo/client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
 import Image from "next/image";
-import { useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { z } from "zod";
 
-import {
-  CheckoutDocument,
-  CheckoutEmailUpdateDocument,
-  CheckoutFieldsFragment,
-  CheckoutMetadataUpdateDocument,
-} from "@/generated/graphql";
+import { Checkout, CheckoutEmailUpdateDocument, CheckoutMetadataUpdateDocument } from "@/generated/graphql";
 
 import { Button, Input } from "../components";
 
@@ -29,14 +24,13 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 interface ContactDetailsProps {
-  initialCheckoutData: CheckoutFieldsFragment;
+  checkoutData: Checkout;
 }
 
-export const ContactDetails = ({ initialCheckoutData }: ContactDetailsProps) => {
-  const { checkoutId } = useParams<{ checkoutId: string }>();
-  const [checkoutData, setCheckoutData] = useState(initialCheckoutData);
+export const ContactDetails = ({ checkoutData }: ContactDetailsProps) => {
+  const router = useRouter();
+  const isSectionCompleted = !!checkoutData.email;
 
-  const [fetchCheckout, { loading: fetchingCheckout }] = useLazyQuery(CheckoutDocument);
   const [updateCheckoutEmail, { loading: updatingEmail }] = useMutation(CheckoutEmailUpdateDocument);
   const [updateCheckoutMetadata, { loading: updatingName }] = useMutation(CheckoutMetadataUpdateDocument);
 
@@ -56,7 +50,7 @@ export const ContactDetails = ({ initialCheckoutData }: ContactDetailsProps) => 
 
   const { handleSubmit } = methods;
   const checkout = checkoutData;
-  const loading = updatingEmail || updatingName || fetchingCheckout;
+  const loading = updatingEmail || updatingName;
 
   useEffect(() => {
     if (checkout) {
@@ -73,7 +67,7 @@ export const ContactDetails = ({ initialCheckoutData }: ContactDetailsProps) => 
       const { data: updatedEmailData } = await updateCheckoutEmail({
         variables: {
           email: email,
-          id: checkoutId,
+          id: checkoutData.id,
         },
       });
 
@@ -97,7 +91,7 @@ export const ContactDetails = ({ initialCheckoutData }: ContactDetailsProps) => 
               value: name,
             },
           ],
-          id: checkoutId,
+          id: checkoutData.id,
         },
       });
 
@@ -112,39 +106,30 @@ export const ContactDetails = ({ initialCheckoutData }: ContactDetailsProps) => 
       }
     }
 
-    const { data } = await fetchCheckout({
-      notifyOnNetworkStatusChange: true,
-      fetchPolicy: "network-only",
-      variables: {
-        id: checkoutId as string,
-      },
-    });
-
-    setCheckoutData(data?.checkout as CheckoutFieldsFragment);
     setIsOpen(false);
+    router.refresh();
   };
 
   return (
-    <div className="border-normalGray relative w-full max-w-sm rounded-md border p-6">
+    <div className="relative w-full max-w-sm rounded-md border border-normalGray p-6">
       <FormProvider {...methods}>
         <form onSubmit={handleSubmit(onSubmit)}>
           <h2 className="mb-3 text-lg font-normal">Contact details</h2>
-          {(!!initialUserName || !!initialUserEmail) && !loading && (
-            <Image
-              className={classNames(`absolute right-6 top-6 cursor-pointer`, {
-                "rotate-0": isOpen,
-                "rotate-180": !isOpen,
-              })}
-              src="/arrow.svg"
-              alt="arrow"
-              width="12"
-              height="12"
-              onClick={() => {
-                setIsOpen(val => !val);
-                methods.reset();
-              }}
-            />
-          )}
+          <Image
+            className={classNames(`absolute right-6 top-6 cursor-pointer`, {
+              "rotate-0": isOpen,
+              "rotate-180": !isOpen,
+              hidden: loading || !initialUserEmail,
+            })}
+            src="/arrow.svg"
+            alt="arrow"
+            width="12"
+            height="12"
+            onClick={() => {
+              setIsOpen(val => !val);
+              methods.reset();
+            }}
+          />
           {isOpen ? (
             <>
               <Input disabled={loading} label="Enter name" name="name" placeholder="Enter name" />
@@ -159,9 +144,11 @@ export const ContactDetails = ({ initialCheckoutData }: ContactDetailsProps) => 
               </div>
             </>
           ) : (
-            <div className="text-normalGray mt-5 break-words text-xs">
-              {initialUserName}, {initialUserEmail}
-            </div>
+            isSectionCompleted && (
+              <div className="mt-5 break-words text-xs text-normalGray">
+                {initialUserName}, {initialUserEmail}
+              </div>
+            )
           )}
         </form>
       </FormProvider>

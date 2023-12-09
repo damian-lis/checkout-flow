@@ -3,6 +3,12 @@ mutation CheckoutCreate($channel: String, $email: String, $lines: [CheckoutLineI
     checkout {
       id
       token
+      channel {
+        countries {
+          code
+          country
+        }
+      }
     }
     errors {
       message
