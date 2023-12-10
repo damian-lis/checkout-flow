@@ -12,6 +12,7 @@ import {
   AddressValidationRulesDocument,
   AddressValidationRulesQueryVariables,
   Checkout,
+  CheckoutDeliveryMethodUpdateDocument,
   CheckoutShippingAddressUpdateDocument,
   CountryCode,
 } from "@/generated/graphql";
@@ -28,10 +29,12 @@ export const ShippingAddress = ({ checkoutData }: ShippingAddressProps) => {
 
   const [isOpen, setIsOpen] = useState(false);
 
+  const [updateDeliveryMethod, { loading: updatingDeliveryMethod }] = useMutation(CheckoutDeliveryMethodUpdateDocument);
+
   const [updateShippingAddress, { loading: updatingShippingAddress }] = useMutation(
     CheckoutShippingAddressUpdateDocument,
     {
-      onCompleted: data => {
+      onCompleted: async data => {
         const errorField = data?.checkoutShippingAddressUpdate?.errors[0]?.field;
         const errorMessage = data?.checkoutShippingAddressUpdate?.errors[0]?.message;
 
@@ -41,6 +44,18 @@ export const ShippingAddress = ({ checkoutData }: ShippingAddressProps) => {
           });
           return;
         }
+
+        const { shippingMethods, id } = data.checkoutShippingAddressUpdate?.checkout || {};
+        if (!shippingMethods?.length || !id) return;
+
+        await updateDeliveryMethod({
+          variables: {
+            id,
+            deliveryMethodId: shippingMethods[0].id,
+          },
+        });
+
+        // TODO: error handling for the delivery method mutation
 
         setIsOpen(false);
         router.refresh();
@@ -165,6 +180,8 @@ export const ShippingAddress = ({ checkoutData }: ShippingAddressProps) => {
     methods.trigger();
   };
 
+  const updating = updatingShippingAddress || updatingDeliveryMethod;
+
   return (
     <div className="relative mt-5 w-full max-w-sm rounded-md border border-normalGray p-6">
       <FormProvider {...methods}>
@@ -174,7 +191,7 @@ export const ShippingAddress = ({ checkoutData }: ShippingAddressProps) => {
             className={classNames(`absolute right-6 top-6 cursor-pointer`, {
               "rotate-0": isOpen,
               "rotate-180": !isOpen,
-              hidden: !isContactDetailsSectionCompleted || updatingShippingAddress,
+              hidden: !isContactDetailsSectionCompleted || updating,
             })}
             src="/arrow.svg"
             alt="arrow"
@@ -189,25 +206,25 @@ export const ShippingAddress = ({ checkoutData }: ShippingAddressProps) => {
             <>
               <Input
                 className="mt-3"
-                disabled={updatingShippingAddress}
+                disabled={updating}
                 label="Fist name"
                 name={mappedFieldsForAutocompletion.firstName}
                 placeholder="First name"
               />
               <Input
-                disabled={updatingShippingAddress}
+                disabled={updating}
                 label="Last name"
                 name={mappedFieldsForAutocompletion.lastName}
                 placeholder="Last name"
               />
               <Input
-                disabled={updatingShippingAddress}
+                disabled={updating}
                 label="Company name"
                 name={mappedFieldsForAutocompletion.companyName}
                 placeholder="Company name"
               />
               <Input
-                disabled={updatingShippingAddress}
+                disabled={updating}
                 label="Zip / postal codel"
                 name={mappedFieldsForAutocompletion.postalCode}
                 placeholder="Zip / postal code"
@@ -215,7 +232,7 @@ export const ShippingAddress = ({ checkoutData }: ShippingAddressProps) => {
               <div className="flex gap-3.5">
                 <div className="flex-grow">
                   <Input
-                    disabled={updatingShippingAddress}
+                    disabled={updating}
                     label="Address (street + house number)"
                     name={mappedFieldsForAutocompletion.streetAddress1}
                     placeholder="Enter a street"
@@ -223,21 +240,16 @@ export const ShippingAddress = ({ checkoutData }: ShippingAddressProps) => {
                 </div>
                 <div className="mt-[18px] w-[86px]">
                   <Input
-                    disabled={updatingShippingAddress}
+                    disabled={updating}
                     type="number"
                     name={mappedFieldsForAutocompletion.streetNumber}
                     placeholder="number"
                   />
                 </div>
               </div>
-              <Input
-                disabled={updatingShippingAddress}
-                label="City"
-                name={mappedFieldsForAutocompletion.city}
-                placeholder="City"
-              />
+              <Input disabled={updating} label="City" name={mappedFieldsForAutocompletion.city} placeholder="City" />
               <Select
-                disabled={updatingShippingAddress}
+                disabled={updating}
                 label="Country"
                 name="country"
                 placeholder="Country"
@@ -246,7 +258,7 @@ export const ShippingAddress = ({ checkoutData }: ShippingAddressProps) => {
               />
               {countryAreaChoicesToDisplay?.length ? (
                 <Select
-                  disabled={updatingShippingAddress}
+                  disabled={updating}
                   label="Country area"
                   name={mappedFieldsForAutocompletion.countryArea}
                   placeholder="Select a country area"
@@ -255,7 +267,7 @@ export const ShippingAddress = ({ checkoutData }: ShippingAddressProps) => {
                 />
               ) : (
                 <Input
-                  disabled={updatingShippingAddress}
+                  disabled={updating}
                   label="Country area"
                   name={mappedFieldsForAutocompletion.countryArea}
                   placeholder="Enter a country area"
@@ -264,12 +276,8 @@ export const ShippingAddress = ({ checkoutData }: ShippingAddressProps) => {
               <div className="text-right">
                 <Button
                   fullWidth
-                  loading={updatingShippingAddress}
-                  disabled={
-                    !methods.formState.isDirty ||
-                    !!Object.entries(methods.formState.errors).length ||
-                    updatingShippingAddress
-                  }
+                  loading={updating}
+                  disabled={!methods.formState.isDirty || !!Object.entries(methods.formState.errors).length || updating}
                 >
                   Continue to paymemt
                 </Button>

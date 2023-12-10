@@ -18,7 +18,7 @@ export const Input = ({ label, name, className, ...props }: InputProps) => {
   return (
     <div className={classNames("mb-5", className)}>
       {label && (
-        <label htmlFor={name} className="mb-1.5 block text-xs text-darkGray">
+        <label htmlFor={name} className="mb-1.5 block whitespace-nowrap text-xs text-darkGray">
           {label}
         </label>
       )}
