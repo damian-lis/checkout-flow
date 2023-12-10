@@ -16,7 +16,7 @@ export const Summary = ({ checkoutData }: SummaryProps) => {
   const productPrice = checkoutData.lines[0].totalPrice.net;
   const productName = checkoutData.lines[0].variant.product.attributes[0].attribute?.name;
   const thumbnailUrl = checkoutData.lines[0].variant.media?.[0].url;
-  const firstShippingMethodPrice = checkoutData.shippingMethods?.[0].price;
+  const firstShippingMethodPrice = checkoutData.shippingMethods?.[0]?.price;
   const tax = checkoutData.totalPrice.tax;
   const totalPrice = checkoutData.totalPrice.gross;
 
@@ -39,7 +39,7 @@ export const Summary = ({ checkoutData }: SummaryProps) => {
       <div className="mb-5 mt-5 flex justify-between text-lg font-normal">
         <div>Shipping</div>
         <div>
-          {firstShippingMethodPrice?.amount ? (
+          {firstShippingMethodPrice ? (
             <>{displayMoney(firstShippingMethodPrice)}</>
           ) : (
             <span className="text-lightGray">To be determined</span>
