@@ -29,5 +29,45 @@ query Checkout($id: ID, $token: UUID) {
       }
       countryArea
     }
+    lines {
+      quantity
+      variant {
+        product {
+          attributes {
+            attribute {
+              name
+            }
+          }
+        }
+        media {
+          url
+        }
+      }
+      totalPrice {
+        currency
+        net {
+          currency
+          amount
+        }
+      }
+    }
+    shippingMethods {
+      id
+      name
+      price {
+        currency
+        amount
+      }
+    }
+    totalPrice {
+      tax {
+        currency
+        amount
+      }
+      gross {
+        currency
+        amount
+      }
+    }
   }
 }

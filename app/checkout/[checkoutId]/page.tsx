@@ -2,8 +2,7 @@ import React from "react";
 
 import { Checkout, CheckoutDocument } from "@/generated/graphql";
 import { getClient } from "@/lib/ApolloClient";
-import { ContactDetails } from "@/sections";
-import { ShippingAddress } from "@/sections/ShippingAddress/ShippingAddress";
+import { ContactDetails, ShippingAddress, Summary } from "@/sections";
 
 interface CheckoutPageProps {
   params: {
@@ -31,7 +30,7 @@ const CheckoutPage = async ({ params: { checkoutId } }: CheckoutPageProps) => {
           <ContactDetails checkoutData={checkoutData} />
           <ShippingAddress checkoutData={checkoutData} />
         </div>
-        <div className="mb-5 h-[280px] w-full max-w-full bg-lightGray md:max-w-xs">Summary</div>
+        <Summary checkoutData={checkoutData} />
       </div>
     </main>
   );
