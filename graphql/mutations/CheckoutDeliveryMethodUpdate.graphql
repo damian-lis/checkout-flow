@@ -1,0 +1,8 @@
+mutation CheckoutDeliveryMethodUpdate($deliveryMethodId: ID!, $id: ID!) {
+  checkoutDeliveryMethodUpdate(deliveryMethodId: $deliveryMethodId, id: $id) {
+    errors {
+      field
+      message
+    }
+  }
+}
