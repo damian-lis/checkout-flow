@@ -2,12 +2,15 @@
 
 import { LazyQueryExecFunction } from "@apollo/client";
 import React from "react";
-import { useFormContext } from "react-hook-form";
 
 import { AddressValidationRulesQuery, CountryCode, CountryDisplay } from "@/generated/graphql";
-import { getCountriesToDisplay, mappedFieldsForAutocompletion } from "@/utils/address";
+import { mappedAddressFieldsForAutocompletion } from "@/utils/address";
 
-import { InputField, Option, SelectField } from ".";
+import { InputField, Option } from ".";
+import { SelectCountryAreasField } from "./SelectCountryAreasField/SelectCountryAreasField";
+import { SelectCountryField } from "./SelectCountryField";
+
+// INFO: Tests for this file are not needed since they have been written for included components separately
 
 interface AddressFieldsProps {
   disabled: boolean;
@@ -27,101 +30,66 @@ export const AddressFields = ({
   refetchValidationRules,
   countries,
   countryAreaChoices,
-}: AddressFieldsProps) => {
-  const { getValues, setValue, trigger } = useFormContext();
-
-  return (
-    <>
-      <InputField
-        className="mt-5"
-        disabled={disabled}
-        label="Fist name"
-        name={mappedFieldsForAutocompletion.firstName}
-        placeholder="First name"
-      />
-      <InputField
-        disabled={disabled}
-        label="Last name"
-        name={mappedFieldsForAutocompletion.lastName}
-        placeholder="Last name"
-      />
-      <InputField
-        disabled={disabled}
-        label="Company name"
-        name={mappedFieldsForAutocompletion.companyName}
-        placeholder="Company name"
-      />
-      <InputField
-        disabled={disabled}
-        label="Zip / postal codel"
-        name={mappedFieldsForAutocompletion.postalCode}
-        placeholder="Zip / postal code"
-      />
-      <div className="flex gap-3.5">
-        <div className="flex-grow">
-          <InputField
-            disabled={disabled}
-            label="Address (street + house number)"
-            name={mappedFieldsForAutocompletion.streetAddress1}
-            placeholder="Enter a street"
-          />
-        </div>
-        <div className="mt-[18px] w-[86px]">
-          <InputField
-            disabled={disabled}
-            type="number"
-            name={mappedFieldsForAutocompletion.streetNumber}
-            placeholder="number"
-          />
-        </div>
-      </div>
-      <InputField disabled={disabled} label="City" name={mappedFieldsForAutocompletion.city} placeholder="City" />
-      <SelectField
-        disabled={disabled}
-        label="Country"
-        name="country"
-        placeholder="Country"
-        options={getCountriesToDisplay(countries)}
-        onChange={async ({ target: { value } }) => {
-          setValue(mappedFieldsForAutocompletion.country, value);
-          setValue(mappedFieldsForAutocompletion.countryArea, "");
-
-          await refetchValidationRules({
-            variables: {
-              countryCode: value as CountryCode,
-            },
-          });
-          trigger();
-        }}
-      />
-      {countryAreaChoices?.length ? (
-        <SelectField
-          disabled={disabled}
-          label="Country area"
-          name={mappedFieldsForAutocompletion.countryArea}
-          placeholder="Select a country area"
-          options={countryAreaChoices}
-          onChange={async ({ target: { value } }) => {
-            const selectedCountryCode = getValues()[mappedFieldsForAutocompletion.country] as CountryCode;
-            setValue(mappedFieldsForAutocompletion.countryArea, value);
-
-            await refetchValidationRules({
-              variables: {
-                countryCode: selectedCountryCode,
-                countryArea: value,
-              },
-            });
-            trigger();
-          }}
-        />
-      ) : (
+}: AddressFieldsProps) => (
+  <>
+    <InputField
+      className="mt-5"
+      disabled={disabled}
+      label="Fist name"
+      name={mappedAddressFieldsForAutocompletion.firstName}
+      placeholder="First name"
+    />
+    <InputField
+      disabled={disabled}
+      label="Last name"
+      name={mappedAddressFieldsForAutocompletion.lastName}
+      placeholder="Last name"
+    />
+    <InputField
+      disabled={disabled}
+      label="Company name"
+      name={mappedAddressFieldsForAutocompletion.companyName}
+      placeholder="Company name"
+    />
+    <InputField
+      disabled={disabled}
+      label="Zip / postal codel"
+      name={mappedAddressFieldsForAutocompletion.postalCode}
+      placeholder="Zip / postal code"
+    />
+    <div className="flex gap-3.5">
+      <div className="flex-grow">
         <InputField
           disabled={disabled}
-          label="Country area"
-          name={mappedFieldsForAutocompletion.countryArea}
-          placeholder="Enter a country area"
+          label="Address (street + house number)"
+          name={mappedAddressFieldsForAutocompletion.streetAddress1}
+          placeholder="Enter a street"
         />
-      )}
-    </>
-  );
-};
+      </div>
+      <div className="mt-[18px] w-[86px]">
+        <InputField
+          disabled={disabled}
+          type="number"
+          name={mappedAddressFieldsForAutocompletion.streetNumber}
+          placeholder="number"
+        />
+      </div>
+    </div>
+    <InputField disabled={disabled} label="City" name={mappedAddressFieldsForAutocompletion.city} placeholder="City" />
+    <SelectCountryField disabled={disabled} refetchValidationRules={refetchValidationRules} countries={countries} />
+    {countryAreaChoices?.length ? (
+      <SelectCountryAreasField
+        disabled={disabled}
+        refetchValidationRules={refetchValidationRules}
+        countryAreaChoices={countryAreaChoices}
+      />
+    ) : (
+      <InputField
+        disabled={disabled}
+        label="Country area"
+        name={mappedAddressFieldsForAutocompletion.countryArea}
+        placeholder="Enter a country area"
+      />
+    )}
+  </>
+);
