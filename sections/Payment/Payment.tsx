@@ -78,8 +78,11 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
   const methods = useForm<FormValuesSchema>({
     resolver: zodResolver(createSchema(validationRules)),
     mode: "onChange",
-    defaultValues: shippingAddress,
   });
+
+  useEffect(() => {
+    methods.reset(shippingAddress);
+  }, [methods, shippingAddress]);
 
   const handleSubmit = async (values: FormValuesSchema) => {
     const { streetNumber, cardNumber, expiryDate, cvc, paymentCountry, ...address } = convertValuesToSend(values);
