@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { AddressValidationRulesQuery } from "@/generated/graphql";
-import { AddressFormFieldsType, mappedFieldsForAutocompletion } from "@/utils";
+import { AddressFormFieldsType, mappedAddressFieldsForAutocompletion } from "@/utils";
 
 const mappedFieldsToDisplay: Record<string, string> = {
   city: "City",
@@ -11,33 +11,33 @@ const mappedFieldsToDisplay: Record<string, string> = {
 
 export const createSchema = (validationRules?: AddressValidationRulesQuery) => {
   let schema = z.object({
-    [mappedFieldsForAutocompletion.firstName]: z.string().min(1, "First name is required"),
-    [mappedFieldsForAutocompletion.lastName]: z.string().min(1, "Last name is required"),
-    [mappedFieldsForAutocompletion.companyName]: z.string().optional(),
-    [mappedFieldsForAutocompletion.postalCode]: z.string().optional(),
-    [mappedFieldsForAutocompletion.streetAddress1]: z.string().optional(),
-    [mappedFieldsForAutocompletion.streetNumber]: z
+    [mappedAddressFieldsForAutocompletion.firstName]: z.string().min(1, "First name is required"),
+    [mappedAddressFieldsForAutocompletion.lastName]: z.string().min(1, "Last name is required"),
+    [mappedAddressFieldsForAutocompletion.companyName]: z.string().optional(),
+    [mappedAddressFieldsForAutocompletion.postalCode]: z.string().optional(),
+    [mappedAddressFieldsForAutocompletion.streetAddress1]: z.string().optional(),
+    [mappedAddressFieldsForAutocompletion.streetNumber]: z
       .string()
       .transform(value => parseInt(value, 10))
       .refine(value => !isNaN(value) && value >= 0, { message: "Incorrect number" })
       .optional(),
-    [mappedFieldsForAutocompletion.city]: z.string().optional(),
-    [mappedFieldsForAutocompletion.country]: z.string().min(1, "Country is required"),
-    [mappedFieldsForAutocompletion.countryArea]: z.string().optional(),
+    [mappedAddressFieldsForAutocompletion.city]: z.string().optional(),
+    [mappedAddressFieldsForAutocompletion.country]: z.string().min(1, "Country is required"),
+    [mappedAddressFieldsForAutocompletion.countryArea]: z.string().optional(),
   });
 
   const rules = validationRules?.addressValidationRules;
   if (rules) {
     rules.requiredFields.forEach(field => {
       schema = schema.extend({
-        [mappedFieldsForAutocompletion[field as AddressFormFieldsType]]: z
+        [mappedAddressFieldsForAutocompletion[field as AddressFormFieldsType]]: z
           .string()
           .min(1, `${mappedFieldsToDisplay[field] || field} is required`),
       }) as any;
 
       if (field === "streetAddress1") {
         schema = schema.extend({
-          [mappedFieldsForAutocompletion.streetNumber]: z
+          [mappedAddressFieldsForAutocompletion.streetNumber]: z
             .string()
             .min(1, "Number is required")
             .transform(value => parseInt(value, 10))
@@ -48,7 +48,7 @@ export const createSchema = (validationRules?: AddressValidationRulesQuery) => {
     rules.allowedFields.forEach(field => {
       if (!rules.requiredFields.includes(field)) {
         schema = schema.extend({
-          [mappedFieldsForAutocompletion[field as AddressFormFieldsType]]: z.string().optional(),
+          [mappedAddressFieldsForAutocompletion[field as AddressFormFieldsType]]: z.string().optional(),
         }) as any;
       }
     });
@@ -60,7 +60,9 @@ export const createSchema = (validationRules?: AddressValidationRulesQuery) => {
       });
 
       schema = schema.extend({
-        [mappedFieldsForAutocompletion.postalCode]: z.string().regex(new RegExp(rules.postalCodeMatchers[0]), message),
+        [mappedAddressFieldsForAutocompletion.postalCode]: z
+          .string()
+          .regex(new RegExp(rules.postalCodeMatchers[0]), message),
       }) as any;
     }
   }

@@ -2,7 +2,7 @@ import { Option } from "@/components";
 import { AddressFieldsFragment } from "@/generated/graphql";
 import { CountryDisplay } from "@/generated/graphql";
 
-type MappedFormFieldsToAutocomplete = {
+type MappedAddressFieldsForAutocomplete = {
   firstName: "given-name";
   lastName: "family-name";
   companyName: "organization";
@@ -14,7 +14,7 @@ type MappedFormFieldsToAutocomplete = {
   countryArea: "address-level1";
 };
 
-export type AddressFormFieldsType = keyof MappedFormFieldsToAutocomplete;
+export type AddressFormFieldsType = keyof MappedAddressFieldsForAutocomplete;
 
 export const addressDisplay = (address: AddressFieldsFragment, countriesToDisplay?: Option[]) => {
   const { firstName, lastName, companyName, city, streetAddress1, streetNumber, countryArea, country } = {
@@ -39,7 +39,7 @@ export const getCountriesToDisplay = (countries?: CountryDisplay[] | null) =>
     value: code,
   }));
 
-export const mappedFieldsForAutocompletion: MappedFormFieldsToAutocomplete = {
+export const mappedAddressFieldsForAutocompletion: MappedAddressFieldsForAutocomplete = {
   firstName: "given-name",
   lastName: "family-name",
   companyName: "organization",
@@ -51,24 +51,34 @@ export const mappedFieldsForAutocompletion: MappedFormFieldsToAutocomplete = {
   countryArea: "address-level1",
 };
 
-export const mappedFieldsFromAutocompletion = Object.entries(mappedFieldsForAutocompletion).reduce<
+export const mappedAddressFieldsFromAutocompletion = Object.entries(mappedAddressFieldsForAutocompletion).reduce<
   Record<string, string>
 >((acc, [key, value]) => {
   acc[value] = key;
   return acc;
 }, {});
 
-export const mapAddressForAutocompletion = (
+export const mapAddressFieldsForAutocompletion = (
   address?: AddressFieldsFragment | null
 ): Record<string, string | undefined> => ({
-  [mappedFieldsForAutocompletion.firstName]: address?.firstName,
-  [mappedFieldsForAutocompletion.lastName]: address?.lastName,
-  [mappedFieldsForAutocompletion.companyName]: address?.companyName,
-  [mappedFieldsForAutocompletion.postalCode]: address?.postalCode,
-  [mappedFieldsForAutocompletion.streetAddress1]: address?.streetAddress1,
-  [mappedFieldsForAutocompletion.streetNumber]: address?.metadata?.find(({ key }) => key === "streetNumber")?.value,
-  [mappedFieldsForAutocompletion.city]: address?.city,
-  [mappedFieldsForAutocompletion.country]: address?.country?.code || "US",
-  [mappedFieldsForAutocompletion.countryArea]:
+  [mappedAddressFieldsForAutocompletion.firstName]: address?.firstName,
+  [mappedAddressFieldsForAutocompletion.lastName]: address?.lastName,
+  [mappedAddressFieldsForAutocompletion.companyName]: address?.companyName,
+  [mappedAddressFieldsForAutocompletion.postalCode]: address?.postalCode,
+  [mappedAddressFieldsForAutocompletion.streetAddress1]: address?.streetAddress1,
+  [mappedAddressFieldsForAutocompletion.streetNumber]: address?.metadata?.find(({ key }) => key === "streetNumber")
+    ?.value,
+  [mappedAddressFieldsForAutocompletion.city]: address?.city,
+  [mappedAddressFieldsForAutocompletion.country]: address?.country?.code || "US",
+  [mappedAddressFieldsForAutocompletion.countryArea]:
     address?.countryArea || address?.metadata?.find(({ key }) => key === "countryArea")?.value,
 });
+
+export const convertValuesToSend = (values: Record<string, string | CountryDisplay>) =>
+  Object.entries(values).reduce<Record<string, string>>((acc, curr) => {
+    const field = curr[0];
+    const value = curr[1];
+
+    acc[mappedAddressFieldsFromAutocompletion[field] || field] = String(value);
+    return acc;
+  }, {});

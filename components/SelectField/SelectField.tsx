@@ -33,6 +33,7 @@ export const SelectField = ({ label, name, options, onChange, placeholder, ...pr
       )}
       <div className="relative">
         <select
+          id={name}
           defaultValue=""
           autoComplete={name}
           {...props}

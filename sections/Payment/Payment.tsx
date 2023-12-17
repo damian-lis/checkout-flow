@@ -23,8 +23,8 @@ import {
   AddressFormFieldsType,
   convertValuesToSend,
   getCountriesToDisplay,
-  mapAddressForAutocompletion,
-  mappedFieldsForAutocompletion,
+  mapAddressFieldsForAutocompletion,
+  mappedAddressFieldsForAutocompletion,
 } from "@/utils";
 
 import { CardNumberField, CvcField, ExpiryDateField } from "./CardDetailsFields";
@@ -66,7 +66,7 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
   const [updateBillingAddress, { loading: updatingBillingAddress }] = useMutation(CheckoutBillingAddressUpdateDocument);
 
   const shippingAddress = useMemo(
-    () => mapAddressForAutocompletion(checkoutData.shippingAddress as AddressFieldsFragment),
+    () => mapAddressFieldsForAutocompletion(checkoutData.shippingAddress as AddressFieldsFragment),
     [checkoutData]
   );
 
@@ -116,7 +116,7 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
     const errorMessage = checkoutBillingAddressUpdateData?.errors[0]?.message;
 
     if (errorField) {
-      methods.setError(mappedFieldsForAutocompletion[errorField as AddressFormFieldsType], {
+      methods.setError(mappedAddressFieldsForAutocompletion[errorField as AddressFormFieldsType], {
         message: errorMessage || undefined,
       });
       return;
@@ -199,7 +199,7 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
                       setShowAddressForm(v => !v);
                       const { cardNumber, expiryDate, cvc, paymentCountry } = methods.getValues();
 
-                      const emptyAddress = mapAddressForAutocompletion();
+                      const emptyAddress = mapAddressFieldsForAutocompletion();
 
                       methods.reset({
                         cardNumber,

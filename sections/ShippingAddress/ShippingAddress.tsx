@@ -24,8 +24,8 @@ import {
   AddressFormFieldsType,
   convertValuesToSend,
   getCountriesToDisplay,
-  mapAddressForAutocompletion,
-  mappedFieldsForAutocompletion,
+  mapAddressFieldsForAutocompletion,
+  mappedAddressFieldsForAutocompletion,
 } from "@/utils";
 
 import { AddressSchema, createSchema } from "./schema";
@@ -54,7 +54,7 @@ export const ShippingAddress = ({ checkoutData, onlyOverview = false }: Shipping
   );
 
   const shippingAddress = useMemo(
-    () => mapAddressForAutocompletion(checkoutData.shippingAddress as AddressFieldsFragment),
+    () => mapAddressFieldsForAutocompletion(checkoutData.shippingAddress as AddressFieldsFragment),
     [checkoutData]
   );
 
@@ -104,7 +104,7 @@ export const ShippingAddress = ({ checkoutData, onlyOverview = false }: Shipping
     const errorMessage = data?.errors[0]?.message;
 
     if (errorField) {
-      methods.setError(mappedFieldsForAutocompletion[errorField as AddressFormFieldsType], {
+      methods.setError(mappedAddressFieldsForAutocompletion[errorField as AddressFormFieldsType], {
         message: errorMessage || undefined,
       });
       return;
