@@ -72,13 +72,13 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
 
   const { validationRules, countryAreaChoices, refetchValidationRules } = useValidationRules(
     showAddressForm ? defaultBillingCountry : (shippingAddress?.country as CountryCode),
-    { skip: onlyOverview || !isReady }
+    { skip: onlyOverview || !isReady || !showAddressForm }
   );
 
   const methods = useForm<FormValuesSchema>({
     resolver: zodResolver(createSchema(validationRules)),
     mode: "onChange",
-    defaultValues: { country: defaultBillingCountry, paymentCountry: defaultPaymentCountry },
+    defaultValues: shippingAddress,
   });
 
   const handleSubmit = async (values: FormValuesSchema) => {
@@ -196,12 +196,14 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
                       setShowAddressForm(v => !v);
                       const { cardNumber, expiryDate, cvc, paymentCountry } = methods.getValues();
 
+                      const emptyAddress = mapAddressForAutocompletion();
+
                       methods.reset({
                         cardNumber,
                         expiryDate,
                         cvc,
                         paymentCountry,
-                        ...(showAddressForm ? shippingAddress : { country: defaultBillingCountry }),
+                        ...(showAddressForm ? shippingAddress : emptyAddress),
                       });
                     }}
                   />
