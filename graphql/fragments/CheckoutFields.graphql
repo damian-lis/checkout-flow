@@ -1,0 +1,66 @@
+#import "./fragments/AddressFields.graphql"
+
+fragment CheckoutFields on Checkout {
+  id
+  email
+  metadata {
+    key
+    value
+  }
+  channel {
+    countries {
+      code
+      country
+    }
+  }
+  shippingAddress {
+    ...AddressFields
+  }
+  billingAddress {
+    ...AddressFields
+  }
+  availablePaymentGateways {
+    id
+    name
+  }
+  lines {
+    quantity
+    variant {
+      product {
+        attributes {
+          attribute {
+            name
+          }
+        }
+      }
+      media {
+        url
+      }
+    }
+    totalPrice {
+      currency
+      net {
+        currency
+        amount
+      }
+    }
+  }
+  shippingMethods {
+    id
+    name
+    price {
+      currency
+      amount
+    }
+  }
+  totalPrice {
+    tax {
+      currency
+      amount
+    }
+    gross {
+      currency
+      amount
+    }
+  }
+}

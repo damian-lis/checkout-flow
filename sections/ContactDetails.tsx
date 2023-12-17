@@ -1,16 +1,20 @@
 "use client";
+
 import { useMutation } from "@apollo/client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import classNames from "classnames";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { z } from "zod";
 
-import { Checkout, CheckoutEmailUpdateDocument, CheckoutMetadataUpdateDocument } from "@/generated/graphql";
+import { Section } from "@/components/Section";
+import {
+  CheckoutEmailUpdateDocument,
+  CheckoutFieldsFragment,
+  CheckoutMetadataUpdateDocument,
+} from "@/generated/graphql";
 
-import { Button, Input } from "../components";
+import { Button, ErrorNotification, InputField, Overview } from "../components";
 
 const schema = z.object({
   email: z
@@ -24,12 +28,12 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 interface ContactDetailsProps {
-  checkoutData: Checkout;
+  checkoutData: CheckoutFieldsFragment;
+  onlyOverview?: boolean;
 }
 
-export const ContactDetails = ({ checkoutData }: ContactDetailsProps) => {
+export const ContactDetails = ({ checkoutData, onlyOverview }: ContactDetailsProps) => {
   const router = useRouter();
-  const isSectionCompleted = !!checkoutData.email;
 
   const [updateCheckoutEmail, { loading: updatingEmail }] = useMutation(CheckoutEmailUpdateDocument);
   const [updateCheckoutMetadata, { loading: updatingName }] = useMutation(CheckoutMetadataUpdateDocument);
@@ -37,34 +41,33 @@ export const ContactDetails = ({ checkoutData }: ContactDetailsProps) => {
   const initialUserName = checkoutData?.metadata.find(({ key }) => key === "name")?.value;
   const initialUserEmail = checkoutData?.email ?? undefined;
 
-  const [isOpen, setIsOpen] = useState(!initialUserName && !initialUserEmail);
+  const isReady = !initialUserName && !initialUserEmail && !onlyOverview;
+  const [isExpanded, setIsExpanded] = useState(isReady);
 
-  useEffect(() => {
-    setIsOpen(!initialUserName && !initialUserEmail);
-  }, [initialUserName, initialUserEmail]);
+  const [generalErrorMsg, setGeneralErrorMsg] = useState("");
 
   const methods = useForm<FormValues>({
     resolver: zodResolver(schema),
     mode: "onChange",
   });
 
-  const { handleSubmit } = methods;
-  const checkout = checkoutData;
-  const loading = updatingEmail || updatingName;
-
   useEffect(() => {
-    if (checkout) {
+    if (checkoutData) {
       methods.reset({
         ...methods.getValues(),
         email: initialUserEmail,
         name: initialUserName,
       });
     }
-  }, [checkout, methods, initialUserName, initialUserEmail]);
+  }, [checkoutData, methods, initialUserName, initialUserEmail]);
+
+  useEffect(() => {
+    setIsExpanded(isReady);
+  }, [isReady]);
 
   const onSubmit: SubmitHandler<FormValues> = async ({ name, email }) => {
     if (initialUserEmail !== email) {
-      const { data: updatedEmailData } = await updateCheckoutEmail({
+      const { data: updatedEmailData, errors: emailDataGqlErrors } = await updateCheckoutEmail({
         variables: {
           email: email,
           id: checkoutData.id,
@@ -73,6 +76,8 @@ export const ContactDetails = ({ checkoutData }: ContactDetailsProps) => {
 
       const errorField = updatedEmailData?.checkoutEmailUpdate?.errors[0]?.field;
       const errorMessage = updatedEmailData?.checkoutEmailUpdate?.errors[0]?.message;
+
+      if (!!emailDataGqlErrors?.length) return setGeneralErrorMsg("Something went wrong, try again later");
 
       if (errorField === "email") {
         methods.setError(errorField, {
@@ -83,7 +88,7 @@ export const ContactDetails = ({ checkoutData }: ContactDetailsProps) => {
     }
 
     if (initialUserName !== name) {
-      const { data: updatedMetadata } = await updateCheckoutMetadata({
+      const { data: updatedMetadata, errors: metadataGqlErrors } = await updateCheckoutMetadata({
         variables: {
           input: [
             {
@@ -94,6 +99,8 @@ export const ContactDetails = ({ checkoutData }: ContactDetailsProps) => {
           id: checkoutData.id,
         },
       });
+
+      if (!!metadataGqlErrors?.length) return setGeneralErrorMsg("Something went wrong, try again later");
 
       const errorField = updatedMetadata?.updateMetadata?.errors[0]?.field;
       const errorMessage = updatedMetadata?.updateMetadata?.errors[0]?.message;
@@ -106,52 +113,54 @@ export const ContactDetails = ({ checkoutData }: ContactDetailsProps) => {
       }
     }
 
-    setIsOpen(false);
+    setIsExpanded(false);
     router.refresh();
   };
 
+  const { handleSubmit } = methods;
+  const updating = updatingEmail || updatingName;
+  const isSectionCompleted = !!checkoutData.email;
+
   return (
-    <div className="relative w-full max-w-sm rounded-md border border-normalGray p-6">
-      <FormProvider {...methods}>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <h2 className="mb-3 text-lg font-normal">Contact details</h2>
-          <Image
-            className={classNames(`absolute right-6 top-6 cursor-pointer`, {
-              "rotate-0": isOpen,
-              "rotate-180": !isOpen,
-              hidden: loading || !initialUserEmail,
-            })}
-            src="/arrow.svg"
-            alt="arrow"
-            width="12"
-            height="12"
-            onClick={() => {
-              setIsOpen(val => !val);
-              methods.reset();
-            }}
-          />
-          {isOpen ? (
-            <>
-              <Input disabled={loading} label="Enter name" name="name" placeholder="Enter name" />
-              <Input disabled={loading} label="Enter email" name="email" placeholder="Enter email" />
-              <div className="text-right">
-                <Button
-                  loading={loading}
-                  disabled={!methods.formState.isDirty || !!Object.entries(methods.formState.errors).length || loading}
-                >
-                  Save and continue
-                </Button>
-              </div>
-            </>
-          ) : (
-            isSectionCompleted && (
-              <div className="mt-5 break-words text-xs text-normalGray">
-                {initialUserName}, {initialUserEmail}
-              </div>
-            )
-          )}
-        </form>
-      </FormProvider>
-    </div>
+    <Section
+      disabled={onlyOverview || !initialUserEmail || updating}
+      title="Contact details"
+      onArrowClick={() => {
+        methods.reset();
+        setIsExpanded(v => !v);
+      }}
+      isArrowUp={isExpanded}
+      content={
+        isExpanded ? (
+          <div className="mt-6">
+            <FormProvider {...methods}>
+              <form onSubmit={handleSubmit(onSubmit)}>
+                <InputField disabled={updating} label="Enter name" name="name" placeholder="Enter name" />
+                <InputField disabled={updating} label="Enter email" name="email" placeholder="Enter email" />
+                {!!generalErrorMsg && (
+                  <ErrorNotification message={generalErrorMsg} onClose={() => setGeneralErrorMsg("")} />
+                )}
+                <div className="mt-5 text-right">
+                  <Button
+                    loading={updating}
+                    disabled={
+                      !methods.formState.isDirty || !!Object.entries(methods.formState.errors).length || updating
+                    }
+                  >
+                    Save and continue
+                  </Button>
+                </div>
+              </form>
+            </FormProvider>
+          </div>
+        ) : (
+          isSectionCompleted && (
+            <Overview>
+              {initialUserName}, {initialUserEmail}
+            </Overview>
+          )
+        )
+      }
+    />
   );
 };

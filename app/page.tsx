@@ -1,4 +1,5 @@
 "use client";
+
 import { useMutation } from "@apollo/client";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -8,9 +9,9 @@ import { Button } from "@/components";
 import { DEFAULT_CHANNEL } from "@/constants";
 import { CheckoutCreateDocument } from "@/generated/graphql";
 
-export default function Home() {
-  const [createCheckout, { data, loading, error }] = useMutation(CheckoutCreateDocument);
+const Home = () => {
   const router = useRouter();
+  const [createCheckout, { data, loading, error }] = useMutation(CheckoutCreateDocument);
 
   const checkoutId = data?.checkoutCreate?.checkout?.id;
   const checkoutCreating = !error && (!!checkoutId || loading);
@@ -41,6 +42,8 @@ export default function Home() {
     router.push(`/checkout/${checkoutId}`);
   }, [data, router, checkoutId]);
 
+  // INFO: The 404 page is handled in the 'not-found.tsx' file
+
   return (
     <main className="flex h-screen items-center justify-center">
       <Button size="big" loading={checkoutCreating} disabled={checkoutCreating} onClick={handleCheckoutCreate}>
@@ -48,4 +51,6 @@ export default function Home() {
       </Button>
     </main>
   );
-}
+};
+
+export default Home;

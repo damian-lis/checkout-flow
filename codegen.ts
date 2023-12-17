@@ -9,7 +9,14 @@ const config: CodegenConfig = {
   generates: {
     "generated/": {
       preset: "client",
-      plugins: [],
+      plugins: [
+        "typescript",
+        "typescript-operations",
+        // ... any other plugins you are using
+      ],
+      config: {
+        dedupeFragments: true, // Add this line to enable deduplication of fragments
+      },
     },
   },
 };

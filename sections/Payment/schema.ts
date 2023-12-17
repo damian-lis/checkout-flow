@@ -11,6 +11,10 @@ const mappedFieldsToDisplay: Record<string, string> = {
 
 export const createSchema = (validationRules?: AddressValidationRulesQuery) => {
   let schema = z.object({
+    cardNumber: z.string(), // a validation is in CardDetailsFields.tsx
+    expiryDate: z.string(), // a validation is in CardDetailsFields.tsx
+    cvc: z.string(), // a validation is in CardDetailsFields.tsx
+    paymentCountry: z.string(),
     [mappedFieldsForAutocompletion.firstName]: z.string().min(1, "First name is required"),
     [mappedFieldsForAutocompletion.lastName]: z.string().min(1, "Last name is required"),
     [mappedFieldsForAutocompletion.companyName]: z.string().optional(),

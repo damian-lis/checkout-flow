@@ -1,0 +1,17 @@
+fragment AddressFields on Address {
+  firstName
+  lastName
+  companyName
+  streetAddress1
+  city
+  postalCode
+  countryArea
+  metadata {
+    key
+    value
+  }
+  country {
+    code
+    country
+  }
+}

@@ -1,3 +1,5 @@
+"use client";
+
 import classNames from "classnames";
 import Image from "next/image";
 import React, { SelectHTMLAttributes } from "react";
@@ -5,13 +7,13 @@ import { useFormContext } from "react-hook-form";
 
 export type Option = { label: string; value: string };
 
-export type SelectProps = {
+export type SelectFieldProps = {
   label?: string;
   name: string;
   options?: Option[];
 } & SelectHTMLAttributes<HTMLSelectElement>;
 
-export const Select = ({ label, name, options, onChange, placeholder, ...props }: SelectProps) => {
+export const SelectField = ({ label, name, options, onChange, placeholder, ...props }: SelectFieldProps) => {
   const {
     register,
     formState: { errors },

@@ -1,146 +1,86 @@
 "use client";
 
-import { useLazyQuery, useMutation } from "@apollo/client";
+import { useMutation } from "@apollo/client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import classNames from "classnames";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
+import { Button, ErrorNotification, Overview } from "@/components";
+import { AddressFields } from "@/components/AddressFields";
+import { Section } from "@/components/Section";
 import {
-  AddressValidationRulesDocument,
-  AddressValidationRulesQueryVariables,
-  Checkout,
+  AddressFieldsFragment,
   CheckoutDeliveryMethodUpdateDocument,
+  CheckoutFieldsFragment,
+  CheckoutShippingAddressUpdate,
   CheckoutShippingAddressUpdateDocument,
+  CheckoutShippingAddressUpdateMutation,
   CountryCode,
 } from "@/generated/graphql";
+import { useValidationRules } from "@/hooks";
+import {
+  addressDisplay,
+  AddressFormFieldsType,
+  convertValuesToSend,
+  getCountriesToDisplay,
+  mapAddressForAutocompletion,
+  mappedFieldsForAutocompletion,
+} from "@/utils";
 
-import { Button, Input, Option, Select } from "../../components";
-import { createSchema, FormFields, FormSchema, mappedFieldsForAutocompletion } from "./schema";
+import { AddressSchema, createSchema } from "./schema";
 
 interface ShippingAddressProps {
-  checkoutData: Checkout;
+  checkoutData: CheckoutFieldsFragment;
+  onlyOverview?: boolean;
 }
 
-export const ShippingAddress = ({ checkoutData }: ShippingAddressProps) => {
+export const ShippingAddress = ({ checkoutData, onlyOverview = false }: ShippingAddressProps) => {
+  const isReady = !!checkoutData.email && !checkoutData.shippingAddress;
+
+  const [isExpanded, setIsExpanded] = useState(isReady && !onlyOverview);
+
+  useEffect(() => {
+    setIsExpanded(isReady);
+  }, [isReady]);
+
   const router = useRouter();
 
-  const [isOpen, setIsOpen] = useState(false);
+  const [generalErrorMsg, setGeneralErrorMsg] = useState("");
 
   const [updateDeliveryMethod, { loading: updatingDeliveryMethod }] = useMutation(CheckoutDeliveryMethodUpdateDocument);
-
   const [updateShippingAddress, { loading: updatingShippingAddress }] = useMutation(
-    CheckoutShippingAddressUpdateDocument,
-    {
-      onCompleted: async data => {
-        const errorField = data?.checkoutShippingAddressUpdate?.errors[0]?.field;
-        const errorMessage = data?.checkoutShippingAddressUpdate?.errors[0]?.message;
-
-        if (errorField) {
-          methods.setError(mappedFieldsForAutocompletion[errorField as FormFields], {
-            message: errorMessage || undefined,
-          });
-          return;
-        }
-
-        const { shippingMethods, id } = data.checkoutShippingAddressUpdate?.checkout || {};
-        if (!shippingMethods?.length || !id) return;
-
-        await updateDeliveryMethod({
-          variables: {
-            id,
-            deliveryMethodId: shippingMethods[0].id,
-          },
-        });
-
-        // TODO: error handling for the delivery method mutation
-
-        setIsOpen(false);
-        router.refresh();
-      },
-    }
+    CheckoutShippingAddressUpdateDocument
   );
-
-  const [countryAreaChoicesToDisplay, setCountryAreaChoicesToDisplay] = useState<Option[]>([]);
-
-  const [fetchValidationRules, { data: validationRules }] = useLazyQuery(AddressValidationRulesDocument, {
-    onCompleted: () => {
-      const countryAreaChoices = validationRules?.addressValidationRules?.countryAreaChoices?.map(
-        ({ raw, verbose }) => ({
-          label: verbose!,
-          value: raw!,
-        })
-      );
-      if (!countryAreaChoices) return;
-      setCountryAreaChoicesToDisplay(countryAreaChoices);
-    },
-  });
 
   const shippingAddress = useMemo(
-    () => ({
-      [mappedFieldsForAutocompletion.firstName]: checkoutData.shippingAddress?.firstName,
-      [mappedFieldsForAutocompletion.lastName]: checkoutData.shippingAddress?.lastName,
-      [mappedFieldsForAutocompletion.companyName]: checkoutData.shippingAddress?.companyName,
-      [mappedFieldsForAutocompletion.postalCode]: checkoutData.shippingAddress?.postalCode,
-      [mappedFieldsForAutocompletion.streetAddress1]: checkoutData.shippingAddress?.streetAddress1,
-      [mappedFieldsForAutocompletion.streetNumber]: checkoutData.shippingAddress?.metadata?.find(
-        ({ key }) => key === "streetNumber"
-      )?.value,
-      [mappedFieldsForAutocompletion.city]: checkoutData.shippingAddress?.city,
-      [mappedFieldsForAutocompletion.country]: checkoutData.shippingAddress?.country?.code || "US",
-      [mappedFieldsForAutocompletion.countryArea]:
-        checkoutData.shippingAddress?.countryArea ||
-        checkoutData.shippingAddress?.metadata?.find(({ key }) => key === "countryArea")?.value,
-    }),
-    [checkoutData]
-  ) as FormSchema;
-
-  const methods = useForm<FormSchema>({
-    resolver: zodResolver(createSchema(validationRules)),
-    mode: "onChange",
-    defaultValues: shippingAddress,
-  });
-
-  useEffect(() => {
-    fetchValidationRules({
-      variables: {
-        countryCode: shippingAddress[mappedFieldsForAutocompletion.country] as CountryCode,
-      },
-    });
-  }, [fetchValidationRules, shippingAddress]);
-
-  useEffect(() => {
-    methods.reset({
-      ...shippingAddress,
-    });
-  }, [methods, shippingAddress]);
-
-  const countriesToDisplay = useMemo(
-    () =>
-      checkoutData?.channel?.countries?.map(({ code, country }) => ({
-        label: country,
-        value: code,
-      })),
+    () => mapAddressForAutocompletion(checkoutData.shippingAddress as AddressFieldsFragment),
     [checkoutData]
   );
 
-  const isContactDetailsSectionCompleted = !!checkoutData.email;
-  const isShippingAddressSectionCompleted = !!checkoutData.shippingAddress;
+  const { validationRules, countryAreaChoices, refetchValidationRules } = useValidationRules(
+    shippingAddress.country as CountryCode,
+    { skip: onlyOverview || !isReady }
+  );
+
+  const methods = useForm<AddressSchema>({
+    resolver: zodResolver(createSchema(validationRules)),
+    mode: "onChange",
+  });
 
   useEffect(() => {
-    setIsOpen(isContactDetailsSectionCompleted && !isShippingAddressSectionCompleted);
-  }, [isContactDetailsSectionCompleted, isShippingAddressSectionCompleted]);
+    methods.reset({ ...shippingAddress, country: shippingAddress.country });
+  }, [methods, shippingAddress, shippingAddress.country]);
 
-  const onSubmit = (address: FormSchema) => {
-    const { streetNumber, ...restAddress } = convertAddressToSend(address);
-    updateShippingAddress({
+  const handleSubmit = async (address: AddressSchema) => {
+    const { streetNumber, ...restAddress } = convertValuesToSend(address);
+
+    const updateShippingAddressData = await updateShippingAddress({
       variables: {
         id: checkoutData.id,
         shippingAddress: {
           ...restAddress,
-          country: restAddress.country as CountryCode,
+          country: restAddress?.country as CountryCode,
           metadata: [
             {
               key: "streetNumber",
@@ -154,171 +94,85 @@ export const ShippingAddress = ({ checkoutData }: ShippingAddressProps) => {
         },
       },
     });
-  };
 
-  const handleCountryOrCountryAreaChange = async (value: string | CountryCode, withCountryArea?: boolean) => {
-    let variables: AddressValidationRulesQueryVariables;
+    if (!!updateShippingAddressData.errors?.length) return setGeneralErrorMsg("Something went wrong, try again later");
 
-    if (withCountryArea) {
-      const selectedCountryCode = methods.getValues()[mappedFieldsForAutocompletion.country] as CountryCode;
-      methods.setValue(mappedFieldsForAutocompletion.countryArea, value);
-      variables = {
-        countryCode: selectedCountryCode,
-        countryArea: value,
-      };
-    } else {
-      methods.setValue(mappedFieldsForAutocompletion.country, value);
-      methods.setValue(mappedFieldsForAutocompletion.countryArea, "");
-      variables = {
-        countryCode: value as CountryCode,
-      };
+    const data = (updateShippingAddressData?.data as CheckoutShippingAddressUpdateMutation)
+      ?.checkoutShippingAddressUpdate;
+
+    const errorField = data?.errors[0]?.field;
+    const errorMessage = data?.errors[0]?.message;
+
+    if (errorField) {
+      methods.setError(mappedFieldsForAutocompletion[errorField as AddressFormFieldsType], {
+        message: errorMessage || undefined,
+      });
+      return;
     }
 
-    await fetchValidationRules({
-      variables,
+    const { shippingMethods, id } = (data as CheckoutShippingAddressUpdate)?.checkout || {};
+    if (!shippingMethods?.length || !id) return;
+
+    const { errors: updateDeliveryMethodGqlErrors } = await updateDeliveryMethod({
+      variables: {
+        id,
+        deliveryMethodId: shippingMethods[0].id,
+      },
     });
-    methods.trigger();
+
+    if (updateDeliveryMethodGqlErrors?.length) return setGeneralErrorMsg("Something went wrong, try again later");
+
+    setIsExpanded(false);
+    router.refresh();
   };
 
-  const updating = updatingShippingAddress || updatingDeliveryMethod;
+  const updating = updatingDeliveryMethod || updatingShippingAddress;
 
   return (
-    <div className="relative mt-5 w-full max-w-sm rounded-md border border-normalGray p-6">
-      <FormProvider {...methods}>
-        <form onSubmit={methods.handleSubmit(onSubmit)}>
-          <h2 className="text-lg font-normal">Shipping Address</h2>
-          <Image
-            className={classNames(`absolute right-6 top-6 cursor-pointer`, {
-              "rotate-0": isOpen,
-              "rotate-180": !isOpen,
-              hidden: !isContactDetailsSectionCompleted || updating,
-            })}
-            src="/arrow.svg"
-            alt="arrow"
-            width="12"
-            height="12"
-            onClick={() => {
-              setIsOpen(val => !val);
-              methods.reset();
-            }}
-          />
-          {isOpen ? (
-            <>
-              <Input
-                className="mt-3"
-                disabled={updating}
-                label="Fist name"
-                name={mappedFieldsForAutocompletion.firstName}
-                placeholder="First name"
-              />
-              <Input
-                disabled={updating}
-                label="Last name"
-                name={mappedFieldsForAutocompletion.lastName}
-                placeholder="Last name"
-              />
-              <Input
-                disabled={updating}
-                label="Company name"
-                name={mappedFieldsForAutocompletion.companyName}
-                placeholder="Company name"
-              />
-              <Input
-                disabled={updating}
-                label="Zip / postal codel"
-                name={mappedFieldsForAutocompletion.postalCode}
-                placeholder="Zip / postal code"
-              />
-              <div className="flex gap-3.5">
-                <div className="flex-grow">
-                  <Input
+    <Section
+      disabled={onlyOverview || !checkoutData.email || updating}
+      title="Shipping Address"
+      onArrowClick={() => setIsExpanded(v => !v)}
+      isArrowUp={isExpanded}
+      content={
+        <>
+          {isExpanded ? (
+            <div className="mt-6">
+              <FormProvider {...methods}>
+                <form onSubmit={methods.handleSubmit(handleSubmit)}>
+                  <AddressFields
                     disabled={updating}
-                    label="Address (street + house number)"
-                    name={mappedFieldsForAutocompletion.streetAddress1}
-                    placeholder="Enter a street"
+                    countries={checkoutData.channel.countries}
+                    countryAreaChoices={countryAreaChoices}
+                    refetchValidationRules={refetchValidationRules}
                   />
-                </div>
-                <div className="mt-[18px] w-[86px]">
-                  <Input
-                    disabled={updating}
-                    type="number"
-                    name={mappedFieldsForAutocompletion.streetNumber}
-                    placeholder="number"
-                  />
-                </div>
-              </div>
-              <Input disabled={updating} label="City" name={mappedFieldsForAutocompletion.city} placeholder="City" />
-              <Select
-                disabled={updating}
-                label="Country"
-                name="country"
-                placeholder="Country"
-                options={countriesToDisplay}
-                onChange={event => handleCountryOrCountryAreaChange(event.target.value)}
-              />
-              {countryAreaChoicesToDisplay?.length ? (
-                <Select
-                  disabled={updating}
-                  label="Country area"
-                  name={mappedFieldsForAutocompletion.countryArea}
-                  placeholder="Select a country area"
-                  options={countryAreaChoicesToDisplay}
-                  onChange={event => handleCountryOrCountryAreaChange(event.target.value, true)}
-                />
-              ) : (
-                <Input
-                  disabled={updating}
-                  label="Country area"
-                  name={mappedFieldsForAutocompletion.countryArea}
-                  placeholder="Enter a country area"
-                />
-              )}
-              <div className="text-right">
-                <Button
-                  fullWidth
-                  loading={updating}
-                  disabled={!methods.formState.isDirty || !!Object.entries(methods.formState.errors).length || updating}
-                >
-                  Continue to paymemt
-                </Button>
-              </div>
-            </>
-          ) : checkoutData.shippingAddress ? (
-            <div className="mt-5 break-words text-xs text-normalGray">
-              {shippingAddress[mappedFieldsForAutocompletion.firstName]}{" "}
-              {shippingAddress[mappedFieldsForAutocompletion.lastName]}{" "}
-              {shippingAddress[mappedFieldsForAutocompletion.companyName]} <br />
-              {shippingAddress[mappedFieldsForAutocompletion.city] &&
-                `${shippingAddress[mappedFieldsForAutocompletion.city]}, `}{" "}
-              {shippingAddress[mappedFieldsForAutocompletion.streetAddress1]}{" "}
-              {shippingAddress[mappedFieldsForAutocompletion.streetNumber]}{" "}
-              {shippingAddress[mappedFieldsForAutocompletion.countryArea]} <br />
-              {
-                countriesToDisplay?.find(
-                  ({ value }) => value === shippingAddress[mappedFieldsForAutocompletion.country]
-                )?.label
-              }
+                  {generalErrorMsg && (
+                    <ErrorNotification message={generalErrorMsg} onClose={() => setGeneralErrorMsg("")} />
+                  )}
+                  <div className="mt-5 text-right">
+                    <Button
+                      fullWidth
+                      loading={updating}
+                      disabled={!methods.formState.isDirty || !!Object.entries(methods.formState.errors).length}
+                    >
+                      Continue to payment
+                    </Button>
+                  </div>
+                </form>
+              </FormProvider>
             </div>
-          ) : null}
-        </form>
-      </FormProvider>
-    </div>
+          ) : (
+            checkoutData.shippingAddress && (
+              <Overview>
+                {addressDisplay(
+                  checkoutData.shippingAddress as AddressFieldsFragment,
+                  getCountriesToDisplay(checkoutData.channel.countries)
+                )}
+              </Overview>
+            )
+          )}
+        </>
+      }
+    />
   );
 };
-
-export const mappedFieldsFromAutocompletion = Object.entries(mappedFieldsForAutocompletion).reduce(
-  (acc, [key, value]) => {
-    acc[value] = key;
-    return acc;
-  },
-  {} as any // TODO to change
-);
-
-const convertAddressToSend = (address: FormSchema) =>
-  Object.entries(address).reduce((acc, curr) => {
-    const field = curr[0];
-    const value = curr[1];
-
-    acc[mappedFieldsFromAutocompletion[field]] = String(value);
-    return acc;
-  }, {} as any); // TODO to change

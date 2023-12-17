@@ -1,0 +1,17 @@
+mutation CheckoutComplete($checkoutId: ID, $metadata: [MetadataInput!]) {
+  checkoutComplete(checkoutId: $checkoutId, metadata: $metadata) {
+    errors {
+      field
+      message
+      code
+    }
+    order {
+      id
+      token
+      metadata {
+        key
+        value
+      }
+    }
+  }
+}

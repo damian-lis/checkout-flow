@@ -1,0 +1,14 @@
+query Order($id: ID) {
+  order(id: $id) {
+    id
+    metadata {
+      key
+      value
+    }
+    created
+    number
+    payments {
+      gateway
+    }
+  }
+}
