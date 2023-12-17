@@ -11,8 +11,12 @@ const mappedFieldsToDisplay: Record<string, string> = {
 
 export const createSchema = (validationRules?: AddressValidationRulesQuery) => {
   let schema = z.object({
-    [mappedFieldsForAutocompletion.firstName]: z.string().min(1, "First name is required"),
-    [mappedFieldsForAutocompletion.lastName]: z.string().min(1, "Last name is required"),
+    cardNumber: z.string().optional(), // a validation is in CardDetailsFields.tsx
+    expiryDate: z.string().optional(), // a validation is in CardDetailsFields.tsx
+    cvc: z.string().optional(), // a validation is in CardDetailsFields.tsx
+    paymentCountry: z.string().optional(),
+    [mappedFieldsForAutocompletion.firstName]: z.string().optional(),
+    [mappedFieldsForAutocompletion.lastName]: z.string().optional(),
     [mappedFieldsForAutocompletion.companyName]: z.string().optional(),
     [mappedFieldsForAutocompletion.postalCode]: z.string().optional(),
     [mappedFieldsForAutocompletion.streetAddress1]: z.string().optional(),
@@ -28,6 +32,11 @@ export const createSchema = (validationRules?: AddressValidationRulesQuery) => {
 
   const rules = validationRules?.addressValidationRules;
   if (rules) {
+    schema = schema.extend({
+      [mappedFieldsForAutocompletion.firstName]: z.string().min(1, "First name is required"),
+      [mappedFieldsForAutocompletion.lastName]: z.string().min(1, "Last name is required"),
+    }) as any;
+
     rules.requiredFields.forEach(field => {
       schema = schema.extend({
         [mappedFieldsForAutocompletion[field as AddressFormFieldsType]]: z

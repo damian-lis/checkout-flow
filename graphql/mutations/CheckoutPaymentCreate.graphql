@@ -1,0 +1,18 @@
+#import "../fragments/CheckoutFields.graphql"
+
+mutation CheckoutPaymentCreate($checkoutId: ID, $id: ID, $input: PaymentInput!) {
+  checkoutPaymentCreate(id: $id, checkoutId: $checkoutId, input: $input) {
+    checkout {
+      ...CheckoutFields
+    }
+    payment {
+      id
+      gateway
+      token
+    }
+    errors {
+      field
+      message
+    }
+  }
+}

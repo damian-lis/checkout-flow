@@ -1,8 +1,8 @@
 import React from "react";
 
-import { Checkout, CheckoutDocument } from "@/generated/graphql";
+import { CheckoutDocument, CheckoutFieldsFragment } from "@/generated/graphql";
 import { getClient } from "@/lib/ApolloClient";
-import { ContactDetails, ShippingAddress, Summary } from "@/sections";
+import { ContactDetails, Payment, ShippingAddress, Summary } from "@/sections";
 
 interface CheckoutPageProps {
   params: {
@@ -18,9 +18,16 @@ const CheckoutPage = async ({ params: { checkoutId } }: CheckoutPageProps) => {
     variables: {
       id: checkoutId,
     },
+    context: {
+      fetchOptions: {
+        next: { revalidate: 0 },
+      },
+    },
   });
 
-  const checkoutData = data.checkout as Checkout; // TODO: Create a fragment
+  // INFO: Potential errors are handled in the 'error.tsx' file
+
+  const checkoutData = data.checkout as CheckoutFieldsFragment;
 
   return (
     <main className="mx-auto mt-40 w-full max-w-[350px] md:max-w-[830px]">
@@ -29,6 +36,7 @@ const CheckoutPage = async ({ params: { checkoutId } }: CheckoutPageProps) => {
         <div className="w-full">
           <ContactDetails checkoutData={checkoutData} />
           <ShippingAddress checkoutData={checkoutData} />
+          <Payment checkoutData={checkoutData} />
         </div>
         <Summary checkoutData={checkoutData} />
       </div>

@@ -3,11 +3,12 @@ import { registerApolloClient } from "@apollo/experimental-nextjs-app-support/rs
 
 import { API_URL } from "@/constants";
 
-export const { getClient } = registerApolloClient(() => {
-  return new ApolloClient({
-    cache: new InMemoryCache(),
-    link: new HttpLink({
-      uri: API_URL,
-    }),
-  });
-});
+export const { getClient } = registerApolloClient(
+  () =>
+    new ApolloClient({
+      cache: new InMemoryCache(),
+      link: new HttpLink({
+        uri: API_URL,
+      }),
+    })
+);

@@ -1,17 +1,24 @@
+"use client";
+
 import classNames from "classnames";
 import getSymbolFromCurrency from "currency-symbol-map";
+import { format, parseISO } from "date-fns";
 import Image from "next/image";
-import React from "react";
+import React, { useState } from "react";
 
-import { Checkout, Money } from "@/generated/graphql";
-
-import { SummaryForMobile } from "./SummaryForMobile";
+import { Overview } from "@/components";
+import { Section } from "@/components/Section";
+import { CheckoutFieldsFragment, Money } from "@/generated/graphql";
 
 interface SummaryProps {
-  checkoutData: Checkout;
+  checkoutData: CheckoutFieldsFragment;
+  orderNumber?: string;
+  orderCreatedDate?: string;
 }
 
-export const Summary = ({ checkoutData }: SummaryProps) => {
+export const Summary = ({ checkoutData, orderNumber, orderCreatedDate }: SummaryProps) => {
+  const [isOpen, setIsOpen] = useState(true);
+
   const quantity = checkoutData.lines[0].quantity;
   const productPrice = checkoutData.lines[0].totalPrice.net;
   const productName = checkoutData.lines[0].variant.product.attributes[0].attribute?.name;
@@ -64,18 +71,39 @@ export const Summary = ({ checkoutData }: SummaryProps) => {
     <>
       <div className={classNames("mb-5 hidden w-full max-w-xs md:block")}>
         <div className="w-full max-w-full md:max-w-xs">
-          <div className="mb-5 text-lg font-bold">Summary</div>
+          {!!orderCreatedDate && !!orderNumber ? (
+            <>
+              <div className="mb-1 text-lg font-bold">Order #{orderNumber}</div>
+              <div className="mb-5 text-lg text-lightGray">{format(parseISO(orderCreatedDate), "dd MMMM yyyy")}</div>
+            </>
+          ) : (
+            <div className="mb-5 text-lg font-bold">Summary</div>
+          )}
           {sharedContent}
         </div>
       </div>
-      <SummaryForMobile sharedContent={sharedContent} quantity={quantity} totalPrice={totalPrice} />
+      <Section
+        className="md:hidden"
+        title="Summary"
+        isArrowUp={isOpen}
+        onArrowClick={() => setIsOpen(v => !v)}
+        content={
+          isOpen ? (
+            sharedContent
+          ) : (
+            <Overview>
+              {quantity} {quantity > 1 ? "products:" : "product:"}
+              {displayMoney(totalPrice)}
+            </Overview>
+          )
+        }
+      />
     </>
   );
 };
 
 export const displayMoney = (data: Money) => (
   <>
-    {getSymbolFromCurrency(data.currency)}
-    {data.amount}
+    {getSymbolFromCurrency(data.currency)} {data.amount}
   </>
 );
