@@ -20,11 +20,11 @@ import {
 import { useValidationRules } from "@/hooks";
 import {
   addressDisplay,
-  AddressFormFieldsType,
-  convertValuesToSend,
+  AddressFieldDefaultFormat,
+  getAddressAutocompletionFormat,
   getCountriesToDisplay,
-  mapAddressFieldsForAutocompletion,
-  mappedAddressFieldsForAutocompletion,
+  getDefaultFormat,
+  mappedDefaultToAutocompletionFormat,
 } from "@/utils";
 
 import { CardNumberField, CvcField, ExpiryDateField } from "./CardDetailsFields";
@@ -51,12 +51,12 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
   const [showAddressForm, setShowAddressForm] = useState(!!checkoutData.billingAddress);
   const [redirecting, setRedirecting] = useState(false);
 
-  const isReady = !!checkoutData.shippingAddress;
-  const [isExpanded, setIsExpanded] = useState(isReady && !onlyOverview);
+  const shouldExpand = !!checkoutData.shippingAddress;
+  const [isExpanded, setIsExpanded] = useState(shouldExpand && !onlyOverview);
 
   useEffect(() => {
-    setIsExpanded(isReady && !onlyOverview);
-  }, [isReady, onlyOverview]);
+    setIsExpanded(shouldExpand && !onlyOverview);
+  }, [shouldExpand, onlyOverview]);
 
   const [paymentCreate, { loading: creatingPayment }] = useMutation(CheckoutPaymentCreateDocument);
   const [checkoutComplete, { loading: completingCheckout }] = useMutation(CheckoutCompleteDocument);
@@ -66,13 +66,13 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
   const [updateBillingAddress, { loading: updatingBillingAddress }] = useMutation(CheckoutBillingAddressUpdateDocument);
 
   const shippingAddress = useMemo(
-    () => mapAddressFieldsForAutocompletion(checkoutData.shippingAddress as AddressFieldsFragment),
+    () => getAddressAutocompletionFormat(checkoutData.shippingAddress as AddressFieldsFragment),
     [checkoutData]
   );
 
   const { validationRules, countryAreaChoices, refetchValidationRules } = useValidationRules(
-    showAddressForm ? defaultBillingCountry : (shippingAddress?.country as CountryCode),
-    { skip: onlyOverview || !isReady || !showAddressForm }
+    showAddressForm ? defaultBillingCountry : shippingAddress?.country,
+    { skip: onlyOverview || !shouldExpand || !showAddressForm }
   );
 
   const methods = useForm<FormValuesSchema>({
@@ -85,7 +85,7 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
   }, [methods, shippingAddress]);
 
   const handleSubmit = async (values: FormValuesSchema) => {
-    const { streetNumber, cardNumber, expiryDate, cvc, paymentCountry, ...address } = convertValuesToSend(values);
+    const { streetNumber, cardNumber, expiryDate, cvc, paymentCountry, ...address } = getDefaultFormat(values);
 
     const updateBillingAddressData = await updateBillingAddress({
       variables: {
@@ -112,11 +112,11 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
     const checkoutBillingAddressUpdateData = (updateBillingAddressData?.data as CheckoutBillingAddressUpdateMutation)
       ?.checkoutBillingAddressUpdate;
 
-    const errorField = checkoutBillingAddressUpdateData?.errors[0]?.field;
+    const errorField = checkoutBillingAddressUpdateData?.errors[0]?.field as AddressFieldDefaultFormat;
     const errorMessage = checkoutBillingAddressUpdateData?.errors[0]?.message;
 
     if (errorField) {
-      methods.setError(mappedAddressFieldsForAutocompletion[errorField as AddressFormFieldsType], {
+      methods.setError(mappedDefaultToAutocompletionFormat[errorField], {
         message: errorMessage || undefined,
       });
       return;
@@ -131,7 +131,7 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
         input: {
           amount: checkoutData.totalPrice.gross.amount,
           gateway: selectedPaymentGatewayId,
-          token: cardNumber.trim(),
+          token: cardNumber!.trim(),
         },
       },
     });
@@ -162,7 +162,7 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
 
   return (
     <Section
-      disabled={onlyOverview || !isReady || updating}
+      disabled={onlyOverview || !shouldExpand || updating}
       title="Payment"
       onArrowClick={() => setIsExpanded(v => !v)}
       isArrowUp={isExpanded}
@@ -172,13 +172,13 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
             <FormProvider {...methods}>
               <form onSubmit={methods.handleSubmit(handleSubmit)}>
                 <div className="mb-5">
-                  <CardNumberField />
+                  <CardNumberField disabled={updating} />
                   <div className="flex gap-5">
                     <div>
-                      <ExpiryDateField />
+                      <ExpiryDateField disabled={updating} />
                     </div>
                     <div>
-                      <CvcField />
+                      <CvcField disabled={updating} />
                     </div>
                   </div>
                 </div>
@@ -199,7 +199,7 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
                       setShowAddressForm(v => !v);
                       const { cardNumber, expiryDate, cvc, paymentCountry } = methods.getValues();
 
-                      const emptyAddress = mapAddressFieldsForAutocompletion();
+                      const emptyAddress = getAddressAutocompletionFormat();
 
                       methods.reset({
                         cardNumber,

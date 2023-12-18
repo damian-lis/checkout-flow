@@ -35,14 +35,17 @@ interface ContactDetailsProps {
 export const ContactDetails = ({ checkoutData, onlyOverview }: ContactDetailsProps) => {
   const router = useRouter();
 
+  const userName = checkoutData?.metadata.find(({ key }) => key === "name")?.value;
+  const userEmail = checkoutData?.email ?? undefined;
+
+  const [userNameForOverview, setUserNameForOverview] = useState(userName);
+  const [userEmailForOverview, setUserEmailForOverview] = useState(checkoutData?.email ?? undefined);
+
   const [updateCheckoutEmail, { loading: updatingEmail }] = useMutation(CheckoutEmailUpdateDocument);
   const [updateCheckoutMetadata, { loading: updatingName }] = useMutation(CheckoutMetadataUpdateDocument);
 
-  const initialUserName = checkoutData?.metadata.find(({ key }) => key === "name")?.value;
-  const initialUserEmail = checkoutData?.email ?? undefined;
-
-  const isReady = !initialUserName && !initialUserEmail && !onlyOverview;
-  const [isExpanded, setIsExpanded] = useState(isReady);
+  const shouldExpand = !userName && !userEmail && !onlyOverview;
+  const [isExpanded, setIsExpanded] = useState(shouldExpand);
 
   const [generalErrorMsg, setGeneralErrorMsg] = useState("");
 
@@ -55,18 +58,18 @@ export const ContactDetails = ({ checkoutData, onlyOverview }: ContactDetailsPro
     if (checkoutData) {
       methods.reset({
         ...methods.getValues(),
-        email: initialUserEmail,
-        name: initialUserName,
+        email: userEmail,
+        name: userName,
       });
     }
-  }, [checkoutData, methods, initialUserName, initialUserEmail]);
+  }, [checkoutData, methods, userName, userEmail]);
 
   useEffect(() => {
-    setIsExpanded(isReady);
-  }, [isReady]);
+    setIsExpanded(shouldExpand);
+  }, [shouldExpand]);
 
   const onSubmit: SubmitHandler<FormValues> = async ({ name, email }) => {
-    if (initialUserEmail !== email) {
+    if (userEmail !== email) {
       const { data: updatedEmailData, errors: emailDataGqlErrors } = await updateCheckoutEmail({
         variables: {
           email: email,
@@ -87,7 +90,7 @@ export const ContactDetails = ({ checkoutData, onlyOverview }: ContactDetailsPro
       }
     }
 
-    if (initialUserName !== name) {
+    if (userName !== name) {
       const { data: updatedMetadata, errors: metadataGqlErrors } = await updateCheckoutMetadata({
         variables: {
           input: [
@@ -113,17 +116,19 @@ export const ContactDetails = ({ checkoutData, onlyOverview }: ContactDetailsPro
       }
     }
 
+    setUserNameForOverview(name);
+    setUserEmailForOverview(email);
+
     setIsExpanded(false);
     router.refresh();
   };
 
   const { handleSubmit } = methods;
   const updating = updatingEmail || updatingName;
-  const isSectionCompleted = !!checkoutData.email;
 
   return (
     <Section
-      disabled={onlyOverview || !initialUserEmail || updating}
+      disabled={onlyOverview || !userEmail || updating}
       title="Contact details"
       onArrowClick={() => {
         methods.reset();
@@ -154,9 +159,10 @@ export const ContactDetails = ({ checkoutData, onlyOverview }: ContactDetailsPro
             </FormProvider>
           </div>
         ) : (
-          isSectionCompleted && (
+          !!userNameForOverview &&
+          !!userEmailForOverview && (
             <Overview>
-              {initialUserName}, {initialUserEmail}
+              {userNameForOverview}, {userEmailForOverview}
             </Overview>
           )
         )

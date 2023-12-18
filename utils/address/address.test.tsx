@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 
 import { CountryDisplay } from "@/generated/graphql";
 
-import { addressDisplay, convertValuesToSend, getCountriesToDisplay, mapAddressFieldsForAutocompletion } from ".";
+import { addressDisplay, getAddressAutocompletionFormat, getCountriesToDisplay, getDefaultFormat } from ".";
 
 const address = {
   firstName: "John",
@@ -17,7 +17,7 @@ const address = {
   postalCode: "99501",
 };
 
-const addressAutocompleteFormat = {
+const addressAutocompletionFormat = {
   "given-name": "John",
   "family-name": "Doe",
   organization: "JD Inc.",
@@ -29,7 +29,7 @@ const addressAutocompleteFormat = {
   "address-level1": "NY",
 };
 
-const addressFormatToSend = {
+const addressInDefaultFormat = {
   firstName: "John",
   lastName: "Doe",
   companyName: "JD Inc.",
@@ -69,33 +69,33 @@ describe("getCountriesToDisplay util", () => {
       { code: "CA", country: "Canada" },
     ];
 
-    const result = getCountriesToDisplay(countries);
+    const countriesToDisplay = getCountriesToDisplay(countries);
 
-    expect(result).toEqual([
+    expect(countriesToDisplay).toEqual([
       { label: "United States", value: "US" },
       { label: "Canada", value: "CA" },
     ]);
   });
 
   it("should return undefined if no countries are provided", () => {
-    const result = getCountriesToDisplay(null);
-    expect(result).toEqual(undefined);
+    const countriesToDisplay = getCountriesToDisplay(null);
+    expect(countriesToDisplay).toEqual(undefined);
   });
 });
 
-describe("mapAddressForAutocompletion", () => {
+describe("getAddressAutocompletionFormat util", () => {
   it("should map the address to autocomplete format", () => {
-    const result = mapAddressFieldsForAutocompletion(address);
+    const result = getAddressAutocompletionFormat(address);
 
-    expect(result).toEqual(addressAutocompleteFormat);
+    expect(result).toEqual(addressAutocompletionFormat);
   });
 });
 
-describe("convertValuesToSend util", () => {
-  it("should convert form values from autocomplete format to the expected 'send' format", () => {
-    const convertedValuesToSend = convertValuesToSend(addressAutocompleteFormat);
+describe("getDefaultFormat util", () => {
+  it("should convert values from autocomplete format to the 'normal' format", () => {
+    const result = getDefaultFormat(addressAutocompletionFormat);
 
-    expect(convertedValuesToSend).toEqual(addressFormatToSend);
+    expect(result).toEqual(addressInDefaultFormat);
   });
 
   it("should leave values that do not have a mapped field in the same format", () => {
@@ -105,8 +105,8 @@ describe("convertValuesToSend util", () => {
       cvc: "123",
     };
 
-    const convertedValuesToSend = convertValuesToSend(nonAddressFields);
+    const result = getDefaultFormat(nonAddressFields);
 
-    expect(convertedValuesToSend).toEqual(nonAddressFields);
+    expect(result).toEqual(nonAddressFields);
   });
 });

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { AddressValidationRulesQuery } from "@/generated/graphql";
-import { AddressFormFieldsType, mappedAddressFieldsForAutocompletion } from "@/utils";
+import { AddressFieldDefaultFormat, mappedDefaultToAutocompletionFormat } from "@/utils";
 
 const mappedFieldsToDisplay: Record<string, string> = {
   city: "City",
@@ -15,38 +15,38 @@ export const createSchema = (validationRules?: AddressValidationRulesQuery) => {
     expiryDate: z.string().optional(), // a validation is in CardDetailsFields.tsx
     cvc: z.string().optional(), // a validation is in CardDetailsFields.tsx
     paymentCountry: z.string().optional(),
-    [mappedAddressFieldsForAutocompletion.firstName]: z.string().optional(),
-    [mappedAddressFieldsForAutocompletion.lastName]: z.string().optional(),
-    [mappedAddressFieldsForAutocompletion.companyName]: z.string().optional(),
-    [mappedAddressFieldsForAutocompletion.postalCode]: z.string().optional(),
-    [mappedAddressFieldsForAutocompletion.streetAddress1]: z.string().optional(),
-    [mappedAddressFieldsForAutocompletion.streetNumber]: z
+    [mappedDefaultToAutocompletionFormat.firstName]: z.string().optional(),
+    [mappedDefaultToAutocompletionFormat.lastName]: z.string().optional(),
+    [mappedDefaultToAutocompletionFormat.companyName]: z.string().optional(),
+    [mappedDefaultToAutocompletionFormat.postalCode]: z.string().optional(),
+    [mappedDefaultToAutocompletionFormat.streetAddress1]: z.string().optional(),
+    [mappedDefaultToAutocompletionFormat.streetNumber]: z
       .string()
       .transform(value => parseInt(value, 10))
       .refine(value => !isNaN(value) && value >= 0, { message: "Incorrect number" })
       .optional(),
-    [mappedAddressFieldsForAutocompletion.city]: z.string().optional(),
-    [mappedAddressFieldsForAutocompletion.country]: z.string().min(1, "Country is required"),
-    [mappedAddressFieldsForAutocompletion.countryArea]: z.string().optional(),
+    [mappedDefaultToAutocompletionFormat.city]: z.string().optional(),
+    [mappedDefaultToAutocompletionFormat.country]: z.string().min(1, "Country is required"),
+    [mappedDefaultToAutocompletionFormat.countryArea]: z.string().optional(),
   });
 
   const rules = validationRules?.addressValidationRules;
   if (rules) {
     schema = schema.extend({
-      [mappedAddressFieldsForAutocompletion.firstName]: z.string().min(1, "First name is required"),
-      [mappedAddressFieldsForAutocompletion.lastName]: z.string().min(1, "Last name is required"),
+      [mappedDefaultToAutocompletionFormat.firstName]: z.string().min(1, "First name is required"),
+      [mappedDefaultToAutocompletionFormat.lastName]: z.string().min(1, "Last name is required"),
     }) as any;
 
     rules.requiredFields.forEach(field => {
       schema = schema.extend({
-        [mappedAddressFieldsForAutocompletion[field as AddressFormFieldsType]]: z
+        [mappedDefaultToAutocompletionFormat[field as AddressFieldDefaultFormat]]: z
           .string()
           .min(1, `${mappedFieldsToDisplay[field] || field} is required`),
       }) as any;
 
       if (field === "streetAddress1") {
         schema = schema.extend({
-          [mappedAddressFieldsForAutocompletion.streetNumber]: z
+          [mappedDefaultToAutocompletionFormat.streetNumber]: z
             .string()
             .min(1, "Number is required")
             .transform(value => parseInt(value, 10))
@@ -57,7 +57,7 @@ export const createSchema = (validationRules?: AddressValidationRulesQuery) => {
     rules.allowedFields.forEach(field => {
       if (!rules.requiredFields.includes(field)) {
         schema = schema.extend({
-          [mappedAddressFieldsForAutocompletion[field as AddressFormFieldsType]]: z.string().optional(),
+          [mappedDefaultToAutocompletionFormat[field as AddressFieldDefaultFormat]]: z.string().optional(),
         }) as any;
       }
     });
@@ -69,7 +69,7 @@ export const createSchema = (validationRules?: AddressValidationRulesQuery) => {
       });
 
       schema = schema.extend({
-        [mappedAddressFieldsForAutocompletion.postalCode]: z
+        [mappedDefaultToAutocompletionFormat.postalCode]: z
           .string()
           .regex(new RegExp(rules.postalCodeMatchers[0]), message),
       }) as any;

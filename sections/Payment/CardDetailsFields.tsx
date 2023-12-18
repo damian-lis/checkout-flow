@@ -2,7 +2,7 @@ import { ChangeEvent, useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { usePaymentInputs } from "react-payment-inputs";
 
-export const CardNumberField = () => {
+export const CardNumberField = ({ disabled }: { disabled: boolean }) => {
   const { meta, getCardNumberProps } = usePaymentInputs();
 
   const {
@@ -34,6 +34,7 @@ export const CardNumberField = () => {
         Card number
       </label>
       <input
+        disabled={disabled}
         className="mt-1 block w-full rounded-md border border-normalGray p-3.5  text-sm placeholder-normalGray shadow-sm
         focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
         {...getCardNumberProps({
@@ -46,7 +47,7 @@ export const CardNumberField = () => {
   );
 };
 
-export const ExpiryDateField = () => {
+export const ExpiryDateField = ({ disabled }: { disabled: boolean }) => {
   const { meta, getExpiryDateProps } = usePaymentInputs();
 
   const {
@@ -78,6 +79,7 @@ export const ExpiryDateField = () => {
         Expiration date*
       </label>
       <input
+        disabled={disabled}
         className="mt-1 block w-full rounded-md border border-normalGray p-3.5  text-sm placeholder-normalGray shadow-sm
         focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
         {...getExpiryDateProps({
@@ -90,7 +92,7 @@ export const ExpiryDateField = () => {
   );
 };
 
-export const CvcField = () => {
+export const CvcField = ({ disabled }: { disabled: boolean }) => {
   const { meta, getCVCProps } = usePaymentInputs();
 
   const {
@@ -121,6 +123,7 @@ export const CvcField = () => {
         CVC*
       </label>
       <input
+        disabled={disabled}
         className="mt-1 block w-full rounded-md border border-normalGray p-3.5  text-sm placeholder-normalGray shadow-sm
         focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
         {...getCVCProps({ onChange: (e: ChangeEvent<HTMLInputElement>) => setValue("cvc", e.target.value) })}

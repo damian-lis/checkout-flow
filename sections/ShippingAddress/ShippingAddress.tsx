@@ -16,16 +16,15 @@ import {
   CheckoutShippingAddressUpdate,
   CheckoutShippingAddressUpdateDocument,
   CheckoutShippingAddressUpdateMutation,
-  CountryCode,
 } from "@/generated/graphql";
 import { useValidationRules } from "@/hooks";
 import {
   addressDisplay,
-  AddressFormFieldsType,
-  convertValuesToSend,
+  AddressFieldDefaultFormat,
+  getAddressAutocompletionFormat,
   getCountriesToDisplay,
-  mapAddressFieldsForAutocompletion,
-  mappedAddressFieldsForAutocompletion,
+  getDefaultFormat,
+  mappedDefaultToAutocompletionFormat,
 } from "@/utils";
 
 import { AddressSchema, createSchema } from "./schema";
@@ -36,15 +35,14 @@ interface ShippingAddressProps {
 }
 
 export const ShippingAddress = ({ checkoutData, onlyOverview = false }: ShippingAddressProps) => {
-  const isReady = !!checkoutData.email && !checkoutData.shippingAddress;
-
-  const [isExpanded, setIsExpanded] = useState(isReady && !onlyOverview);
-
-  useEffect(() => {
-    setIsExpanded(isReady);
-  }, [isReady]);
-
   const router = useRouter();
+
+  const [shippingAddressForOverview, setShippingAddressForOverview] = useState(
+    checkoutData.shippingAddress as AddressFieldsFragment
+  );
+
+  const shouldExpand = !!checkoutData.email && !checkoutData.shippingAddress;
+  const [isExpanded, setIsExpanded] = useState(shouldExpand && !onlyOverview);
 
   const [generalErrorMsg, setGeneralErrorMsg] = useState("");
 
@@ -54,14 +52,13 @@ export const ShippingAddress = ({ checkoutData, onlyOverview = false }: Shipping
   );
 
   const shippingAddress = useMemo(
-    () => mapAddressFieldsForAutocompletion(checkoutData.shippingAddress as AddressFieldsFragment),
+    () => getAddressAutocompletionFormat(checkoutData.shippingAddress as AddressFieldsFragment),
     [checkoutData]
   );
 
-  const { validationRules, countryAreaChoices, refetchValidationRules } = useValidationRules(
-    shippingAddress.country as CountryCode,
-    { skip: onlyOverview || !isReady }
-  );
+  const { validationRules, countryAreaChoices, refetchValidationRules } = useValidationRules(shippingAddress.country, {
+    skip: onlyOverview || !checkoutData.email,
+  });
 
   const methods = useForm<AddressSchema>({
     resolver: zodResolver(createSchema(validationRules)),
@@ -72,26 +69,31 @@ export const ShippingAddress = ({ checkoutData, onlyOverview = false }: Shipping
     methods.reset({ ...shippingAddress, country: shippingAddress.country });
   }, [methods, shippingAddress, shippingAddress.country]);
 
+  useEffect(() => {
+    setIsExpanded(shouldExpand);
+  }, [shouldExpand]);
+
   const handleSubmit = async (address: AddressSchema) => {
-    const { streetNumber, ...restAddress } = convertValuesToSend(address);
+    const { streetNumber, ...restAddress } = getDefaultFormat(address);
+
+    const shippingAddressInput = {
+      ...restAddress,
+      metadata: [
+        {
+          key: "streetNumber",
+          value: String(streetNumber),
+        },
+        {
+          key: "countryArea",
+          value: restAddress.countryArea || "",
+        },
+      ],
+    };
 
     const updateShippingAddressData = await updateShippingAddress({
       variables: {
         id: checkoutData.id,
-        shippingAddress: {
-          ...restAddress,
-          country: restAddress?.country as CountryCode,
-          metadata: [
-            {
-              key: "streetNumber",
-              value: String(streetNumber),
-            },
-            {
-              key: "countryArea",
-              value: restAddress.countryArea || "",
-            },
-          ],
-        },
+        shippingAddress: shippingAddressInput,
       },
     });
 
@@ -100,11 +102,11 @@ export const ShippingAddress = ({ checkoutData, onlyOverview = false }: Shipping
     const data = (updateShippingAddressData?.data as CheckoutShippingAddressUpdateMutation)
       ?.checkoutShippingAddressUpdate;
 
-    const errorField = data?.errors[0]?.field;
+    const errorField = data?.errors[0]?.field as AddressFieldDefaultFormat;
     const errorMessage = data?.errors[0]?.message;
 
     if (errorField) {
-      methods.setError(mappedAddressFieldsForAutocompletion[errorField as AddressFormFieldsType], {
+      methods.setError(mappedDefaultToAutocompletionFormat[errorField], {
         message: errorMessage || undefined,
       });
       return;
@@ -122,6 +124,10 @@ export const ShippingAddress = ({ checkoutData, onlyOverview = false }: Shipping
 
     if (updateDeliveryMethodGqlErrors?.length) return setGeneralErrorMsg("Something went wrong, try again later");
 
+    setShippingAddressForOverview({
+      ...shippingAddressInput,
+      country: { code: restAddress.country },
+    } as AddressFieldsFragment);
     setIsExpanded(false);
     router.refresh();
   };
@@ -162,12 +168,9 @@ export const ShippingAddress = ({ checkoutData, onlyOverview = false }: Shipping
               </FormProvider>
             </div>
           ) : (
-            checkoutData.shippingAddress && (
+            shippingAddressForOverview && (
               <Overview>
-                {addressDisplay(
-                  checkoutData.shippingAddress as AddressFieldsFragment,
-                  getCountriesToDisplay(checkoutData.channel.countries)
-                )}
+                {addressDisplay(shippingAddressForOverview, getCountriesToDisplay(checkoutData.channel.countries))}
               </Overview>
             )
           )}
