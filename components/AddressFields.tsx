@@ -4,7 +4,7 @@ import { LazyQueryExecFunction } from "@apollo/client";
 import React from "react";
 
 import { AddressValidationRulesQuery, CountryCode, CountryDisplay } from "@/generated/graphql";
-import { mappedAddressFieldsForAutocompletion } from "@/utils/address";
+import { mappedDefaultToAutocompletionFormat } from "@/utils/address";
 
 import { InputField, Option } from ".";
 import { SelectCountryAreasField } from "./SelectCountryAreasField/SelectCountryAreasField";
@@ -36,25 +36,25 @@ export const AddressFields = ({
       className="mt-5"
       disabled={disabled}
       label="Fist name"
-      name={mappedAddressFieldsForAutocompletion.firstName}
+      name={mappedDefaultToAutocompletionFormat.firstName}
       placeholder="First name"
     />
     <InputField
       disabled={disabled}
       label="Last name"
-      name={mappedAddressFieldsForAutocompletion.lastName}
+      name={mappedDefaultToAutocompletionFormat.lastName}
       placeholder="Last name"
     />
     <InputField
       disabled={disabled}
       label="Company name"
-      name={mappedAddressFieldsForAutocompletion.companyName}
+      name={mappedDefaultToAutocompletionFormat.companyName}
       placeholder="Company name"
     />
     <InputField
       disabled={disabled}
       label="Zip / postal codel"
-      name={mappedAddressFieldsForAutocompletion.postalCode}
+      name={mappedDefaultToAutocompletionFormat.postalCode}
       placeholder="Zip / postal code"
     />
     <div className="flex gap-3.5">
@@ -62,7 +62,7 @@ export const AddressFields = ({
         <InputField
           disabled={disabled}
           label="Address (street + house number)"
-          name={mappedAddressFieldsForAutocompletion.streetAddress1}
+          name={mappedDefaultToAutocompletionFormat.streetAddress1}
           placeholder="Enter a street"
         />
       </div>
@@ -70,12 +70,12 @@ export const AddressFields = ({
         <InputField
           disabled={disabled}
           type="number"
-          name={mappedAddressFieldsForAutocompletion.streetNumber}
+          name={mappedDefaultToAutocompletionFormat.streetNumber}
           placeholder="number"
         />
       </div>
     </div>
-    <InputField disabled={disabled} label="City" name={mappedAddressFieldsForAutocompletion.city} placeholder="City" />
+    <InputField disabled={disabled} label="City" name={mappedDefaultToAutocompletionFormat.city} placeholder="City" />
     <SelectCountryField disabled={disabled} refetchValidationRules={refetchValidationRules} countries={countries} />
     {countryAreaChoices?.length ? (
       <SelectCountryAreasField
@@ -87,7 +87,7 @@ export const AddressFields = ({
       <InputField
         disabled={disabled}
         label="Country area"
-        name={mappedAddressFieldsForAutocompletion.countryArea}
+        name={mappedDefaultToAutocompletionFormat.countryArea}
         placeholder="Enter a country area"
       />
     )}

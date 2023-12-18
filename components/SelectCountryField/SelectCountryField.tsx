@@ -5,7 +5,7 @@ import React from "react";
 import { useFormContext } from "react-hook-form";
 
 import { AddressValidationRulesQuery, CountryCode, CountryDisplay } from "@/generated/graphql";
-import { getCountriesToDisplay, mappedAddressFieldsForAutocompletion } from "@/utils/address";
+import { getCountriesToDisplay, mappedDefaultToAutocompletionFormat } from "@/utils/address";
 
 import { SelectField } from "..";
 
@@ -32,8 +32,8 @@ export const SelectCountryField = ({ disabled, refetchValidationRules, countries
       placeholder="Country"
       options={getCountriesToDisplay(countries)}
       onChange={async ({ target: { value } }) => {
-        setValue(mappedAddressFieldsForAutocompletion.country, value);
-        setValue(mappedAddressFieldsForAutocompletion.countryArea, "");
+        setValue(mappedDefaultToAutocompletionFormat.country, value);
+        setValue(mappedDefaultToAutocompletionFormat.countryArea, "");
 
         await refetchValidationRules({
           variables: {
