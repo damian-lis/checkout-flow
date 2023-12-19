@@ -102,7 +102,7 @@ export const Summary = ({ checkoutData, orderNumber, orderCreatedDate }: Summary
   );
 };
 
-export const displayMoney = (data: Money) => (
+const displayMoney = (data: Money) => (
   <>
     {getSymbolFromCurrency(data.currency)} {data.amount}
   </>

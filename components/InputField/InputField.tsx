@@ -26,6 +26,7 @@ export const InputField = ({ label, name, className, ...props }: InputFieldProps
         </label>
       )}
       <input
+        data-testid={`${name}-input`}
         autoComplete={name}
         {...props}
         {...register(name)}

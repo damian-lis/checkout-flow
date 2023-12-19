@@ -8,7 +8,11 @@ interface ErrorNotificationProps {
 }
 
 export const ErrorNotification = ({ message, onClose }: ErrorNotificationProps) => (
-  <div className="relative rounded border border-red-400 bg-red-100 px-4 py-3 text-sm text-red-700" role="alert">
+  <div
+    data-testid="error-notification"
+    className="relative rounded border border-red-400 bg-red-100 px-4 py-3 text-sm text-red-700"
+    role="alert"
+  >
     {message}
     <button
       onClick={() => onClose?.()}
