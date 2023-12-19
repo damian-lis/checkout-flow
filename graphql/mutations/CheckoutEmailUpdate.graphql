@@ -1,5 +1,10 @@
+#import "../fragments/CheckoutFields.graphql"
+
 mutation CheckoutEmailUpdate($email: String!, $id: ID) {
   checkoutEmailUpdate(email: $email, id: $id) {
+    checkout {
+      ...CheckoutFields
+    }
     errors {
       field
       message

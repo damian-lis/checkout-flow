@@ -1,20 +1,17 @@
 "use client";
 
-import { useMutation } from "@apollo/client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
+import { updateDeliveryMethod, updateShippingAddress } from "@/app/actions";
 import { Button, ErrorNotification, Overview } from "@/components";
 import { AddressFields } from "@/components/AddressFields";
 import { Section } from "@/components/Section";
 import {
   AddressFieldsFragment,
-  CheckoutDeliveryMethodUpdateDocument,
   CheckoutFieldsFragment,
   CheckoutShippingAddressUpdate,
-  CheckoutShippingAddressUpdateDocument,
   CheckoutShippingAddressUpdateMutation,
 } from "@/generated/graphql";
 import { useValidationRules } from "@/hooks";
@@ -35,21 +32,12 @@ interface ShippingAddressProps {
 }
 
 export const ShippingAddress = ({ checkoutData, onlyOverview = false }: ShippingAddressProps) => {
-  const router = useRouter();
-
-  const [shippingAddressForOverview, setShippingAddressForOverview] = useState(
-    checkoutData.shippingAddress as AddressFieldsFragment
-  );
+  const [updating, setUpdating] = useState(false);
 
   const shouldExpand = !!checkoutData.email && !checkoutData.shippingAddress;
   const [isExpanded, setIsExpanded] = useState(shouldExpand && !onlyOverview);
 
   const [generalErrorMsg, setGeneralErrorMsg] = useState("");
-
-  const [updateDeliveryMethod, { loading: updatingDeliveryMethod }] = useMutation(CheckoutDeliveryMethodUpdateDocument);
-  const [updateShippingAddress, { loading: updatingShippingAddress }] = useMutation(
-    CheckoutShippingAddressUpdateDocument
-  );
 
   const shippingAddress = useMemo(
     () => getAddressAutocompletionFormat(checkoutData.shippingAddress as AddressFieldsFragment),
@@ -76,26 +64,24 @@ export const ShippingAddress = ({ checkoutData, onlyOverview = false }: Shipping
   const handleSubmit = async (address: AddressSchema) => {
     const { streetNumber, ...restAddress } = getDefaultFormat(address);
 
-    const shippingAddressInput = {
-      ...restAddress,
-      metadata: [
-        {
-          key: "streetNumber",
-          value: String(streetNumber),
-        },
-        {
-          key: "countryArea",
-          value: restAddress.countryArea || "",
-        },
-      ],
-    };
-
-    const updateShippingAddressData = await updateShippingAddress({
-      variables: {
-        id: checkoutData.id,
-        shippingAddress: shippingAddressInput,
+    setUpdating(true);
+    const updateShippingAddressData = await updateShippingAddress(
+      {
+        ...restAddress,
+        metadata: [
+          {
+            key: "streetNumber",
+            value: String(streetNumber),
+          },
+          {
+            key: "countryArea",
+            value: restAddress.countryArea || "",
+          },
+        ],
       },
-    });
+      checkoutData.id
+    );
+    setUpdating(false);
 
     if (!!updateShippingAddressData.errors?.length) return setGeneralErrorMsg("Something went wrong, try again later");
 
@@ -115,24 +101,14 @@ export const ShippingAddress = ({ checkoutData, onlyOverview = false }: Shipping
     const { shippingMethods, id } = (data as CheckoutShippingAddressUpdate)?.checkout || {};
     if (!shippingMethods?.length || !id) return;
 
-    const { errors: updateDeliveryMethodGqlErrors } = await updateDeliveryMethod({
-      variables: {
-        id,
-        deliveryMethodId: shippingMethods[0].id,
-      },
-    });
+    setUpdating(true);
+    const { errors: updateDeliveryMethodGqlErrors } = await updateDeliveryMethod(shippingMethods[0].id, id);
+    setUpdating(false);
 
     if (updateDeliveryMethodGqlErrors?.length) return setGeneralErrorMsg("Something went wrong, try again later");
 
-    setShippingAddressForOverview({
-      ...shippingAddressInput,
-      country: { code: restAddress.country },
-    } as AddressFieldsFragment);
     setIsExpanded(false);
-    router.refresh();
   };
-
-  const updating = updatingDeliveryMethod || updatingShippingAddress;
 
   return (
     <Section
@@ -168,9 +144,12 @@ export const ShippingAddress = ({ checkoutData, onlyOverview = false }: Shipping
               </FormProvider>
             </div>
           ) : (
-            shippingAddressForOverview && (
+            checkoutData.shippingAddress && (
               <Overview>
-                {addressDisplay(shippingAddressForOverview, getCountriesToDisplay(checkoutData.channel.countries))}
+                {addressDisplay(
+                  checkoutData.shippingAddress as AddressFieldsFragment,
+                  getCountriesToDisplay(checkoutData.channel.countries)
+                )}
               </Overview>
             )
           )}

@@ -1,20 +1,17 @@
 "use client";
 
-import { useMutation } from "@apollo/client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useTransition } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
+import { checkoutComplete, paymentCreate, updateBillingAddress } from "@/app/actions";
 import { AddressFields, Button, ErrorNotification, Overview, SelectField } from "@/components";
 import { Section } from "@/components/Section";
 import {
   AddressFieldsFragment,
-  CheckoutBillingAddressUpdateDocument,
   CheckoutBillingAddressUpdateMutation,
-  CheckoutCompleteDocument,
   CheckoutFieldsFragment,
-  CheckoutPaymentCreateDocument,
   CountryCode,
 } from "@/generated/graphql";
 import { useValidationRules } from "@/hooks";
@@ -48,8 +45,8 @@ interface PaymentProps {
 export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = false }: PaymentProps) => {
   const router = useRouter();
 
+  const [pending, startTransition] = useTransition();
   const [showAddressForm, setShowAddressForm] = useState(!!checkoutData.billingAddress);
-  const [redirecting, setRedirecting] = useState(false);
 
   const shouldExpand = !!checkoutData.shippingAddress;
   const [isExpanded, setIsExpanded] = useState(shouldExpand && !onlyOverview);
@@ -58,12 +55,7 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
     setIsExpanded(shouldExpand && !onlyOverview);
   }, [shouldExpand, onlyOverview]);
 
-  const [paymentCreate, { loading: creatingPayment }] = useMutation(CheckoutPaymentCreateDocument);
-  const [checkoutComplete, { loading: completingCheckout }] = useMutation(CheckoutCompleteDocument);
-
   const [generalErrorMsg, setGeneralErrorMsg] = useState("");
-
-  const [updateBillingAddress, { loading: updatingBillingAddress }] = useMutation(CheckoutBillingAddressUpdateDocument);
 
   const shippingAddress = useMemo(
     () => getAddressAutocompletionFormat(checkoutData.shippingAddress as AddressFieldsFragment),
@@ -85,12 +77,11 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
   }, [methods, shippingAddress]);
 
   const handleSubmit = async (values: FormValuesSchema) => {
-    const { streetNumber, cardNumber, expiryDate, cvc, paymentCountry, ...address } = getDefaultFormat(values);
+    startTransition(async () => {
+      const { streetNumber, cardNumber, expiryDate, cvc, paymentCountry, ...address } = getDefaultFormat(values);
 
-    const updateBillingAddressData = await updateBillingAddress({
-      variables: {
-        id: checkoutData.id,
-        billingAddress: {
+      const updateBillingAddressData = await updateBillingAddress(
+        {
           ...address,
           country: address?.country as CountryCode,
           metadata: [
@@ -104,65 +95,69 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
             },
           ],
         },
-      },
-    });
+        checkoutData.id
+      );
 
-    if (!!updateBillingAddressData.errors?.length) return setGeneralErrorMsg("Something went wrong, try again later");
+      if (!!updateBillingAddressData.errors?.length) return setGeneralErrorMsg("Something went wrong, try again later");
 
-    const checkoutBillingAddressUpdateData = (updateBillingAddressData?.data as CheckoutBillingAddressUpdateMutation)
-      ?.checkoutBillingAddressUpdate;
+      const checkoutBillingAddressUpdateData = (updateBillingAddressData?.data as CheckoutBillingAddressUpdateMutation)
+        ?.checkoutBillingAddressUpdate;
 
-    const errorField = checkoutBillingAddressUpdateData?.errors[0]?.field as AddressFieldDefaultFormat;
-    const errorMessage = checkoutBillingAddressUpdateData?.errors[0]?.message;
+      const errorField = checkoutBillingAddressUpdateData?.errors[0]?.field as AddressFieldDefaultFormat;
+      const errorMessage = checkoutBillingAddressUpdateData?.errors[0]?.message;
 
-    if (errorField) {
-      methods.setError(mappedDefaultToAutocompletionFormat[errorField], {
-        message: errorMessage || undefined,
-      });
-      return;
-    }
+      if (errorField) {
+        methods.setError(mappedDefaultToAutocompletionFormat[errorField], {
+          message: errorMessage || undefined,
+        });
+        return;
+      }
 
-    if (!checkoutData.availablePaymentGateways.some(gateway => gateway.id === selectedPaymentGatewayId))
-      return setGeneralErrorMsg(`The ${mappedPaymentGateways[selectedPaymentGatewayId]} is not avaiable.`);
+      if (!checkoutData.availablePaymentGateways.some(gateway => gateway.id === selectedPaymentGatewayId))
+        return setGeneralErrorMsg(`The ${mappedPaymentGateways[selectedPaymentGatewayId]} is not avaiable.`);
 
-    const paymentCreateData = await paymentCreate({
-      variables: {
-        checkoutId: checkoutData.id,
-        input: {
-          amount: checkoutData.totalPrice.gross.amount,
-          gateway: selectedPaymentGatewayId,
-          token: cardNumber!.trim(),
+      const paymentCreateData = await paymentCreate(
+        checkoutData.totalPrice.gross.amount,
+        selectedPaymentGatewayId,
+        cardNumber!.trim(),
+        checkoutData.id
+      );
+
+      const updatedCheckoutData = paymentCreateData?.data?.checkoutPaymentCreate?.checkout as CheckoutFieldsFragment;
+
+      if (
+        !!paymentCreateData.errors?.length ||
+        !paymentCreateData?.data?.checkoutPaymentCreate?.payment ||
+        !updatedCheckoutData
+      )
+        return setGeneralErrorMsg("Something went wrong, try again later");
+
+      const stringifiedCheckoutData = JSON.stringify({
+        ...paymentCreateData.data.checkoutPaymentCreate.checkout,
+        channel: {
+          countries: [
+            (updatedCheckoutData.shippingAddress as AddressFieldsFragment)?.country,
+            (updatedCheckoutData.billingAddress as AddressFieldsFragment)?.country,
+          ].filter(Boolean),
         },
-      },
-    });
+      });
 
-    if (!!paymentCreateData.errors?.length || !paymentCreateData?.data?.checkoutPaymentCreate?.payment)
-      return setGeneralErrorMsg("Something went wrong, try again later");
+      const checkoutCompleteData = await checkoutComplete(
+        [{ key: "checkoutData", value: stringifiedCheckoutData }],
+        checkoutData.id
+      );
 
-    await checkoutComplete({
-      variables: {
-        checkoutId: checkoutData.id,
-        metadata: [
-          { key: "checkoutData", value: JSON.stringify(paymentCreateData.data.checkoutPaymentCreate.checkout) },
-        ],
-      },
-      onCompleted: data => {
-        setRedirecting(true);
-        const orderId = data.checkoutComplete?.order?.id;
-        if (!orderId) {
-          setRedirecting(false);
-          return setGeneralErrorMsg("Something went wrong, try again later");
-        }
-        router.push(`/order/${data.checkoutComplete?.order?.id}`);
-      },
+      if (!!checkoutCompleteData.errors?.length || !checkoutCompleteData.data?.checkoutComplete?.order?.id) {
+        return setGeneralErrorMsg("Something went wrong, try again later");
+      }
+
+      router.push(`/order/${checkoutCompleteData.data.checkoutComplete?.order?.id}`);
     });
   };
 
-  const updating = updatingBillingAddress || creatingPayment || completingCheckout || redirecting;
-
   return (
     <Section
-      disabled={onlyOverview || !shouldExpand || updating}
+      disabled={onlyOverview || !shouldExpand || pending}
       title="Payment"
       onArrowClick={() => setIsExpanded(v => !v)}
       isArrowUp={isExpanded}
@@ -172,19 +167,19 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
             <FormProvider {...methods}>
               <form onSubmit={methods.handleSubmit(handleSubmit)}>
                 <div className="mb-5">
-                  <CardNumberField disabled={updating} />
+                  <CardNumberField disabled={pending} />
                   <div className="flex gap-5">
                     <div>
-                      <ExpiryDateField disabled={updating} />
+                      <ExpiryDateField disabled={pending} />
                     </div>
                     <div>
-                      <CvcField disabled={updating} />
+                      <CvcField disabled={pending} />
                     </div>
                   </div>
                 </div>
                 <SelectField
                   defaultValue={defaultPaymentCountry}
-                  disabled={updating}
+                  disabled={pending}
                   label="Country"
                   name="paymentCountry"
                   placeholder="Country"
@@ -192,7 +187,7 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
                 />
                 <label className="mb-1.5 mt-6 flex w-max cursor-pointer gap-1.5 whitespace-nowrap align-middle text-xs text-darkGray">
                   <input
-                    disabled={updating}
+                    disabled={pending}
                     checked={showAddressForm}
                     type="checkbox"
                     onChange={() => {
@@ -214,7 +209,7 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
                 </label>
                 {showAddressForm && (
                   <AddressFields
-                    disabled={updating}
+                    disabled={pending}
                     countries={checkoutData.channel.countries}
                     countryAreaChoices={countryAreaChoices}
                     refetchValidationRules={refetchValidationRules}
@@ -226,7 +221,7 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
                 <div className="mt-5 text-right">
                   <Button
                     fullWidth
-                    loading={updating}
+                    loading={pending}
                     disabled={!methods.getValues()["cardNumber"] || !!Object.entries(methods.formState.errors).length}
                   >
                     Pay

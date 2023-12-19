@@ -18,14 +18,7 @@ const CheckoutPage = async ({ params: { checkoutId } }: CheckoutPageProps) => {
     variables: {
       id: checkoutId,
     },
-    context: {
-      fetchOptions: {
-        next: { revalidate: 0 },
-      },
-    },
   });
-
-  // INFO: Potential errors are handled in the 'error.tsx' file
 
   const checkoutData = data.checkout as CheckoutFieldsFragment;
 
