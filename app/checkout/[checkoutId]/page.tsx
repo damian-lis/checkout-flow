@@ -18,6 +18,11 @@ const CheckoutPage = async ({ params: { checkoutId } }: CheckoutPageProps) => {
     variables: {
       id: checkoutId,
     },
+    context: {
+      fetchOptions: {
+        next: { revalidate: 0 },
+      },
+    },
   });
 
   const checkoutData = data.checkout as CheckoutFieldsFragment;

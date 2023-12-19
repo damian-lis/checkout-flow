@@ -18,6 +18,11 @@ const CheckoutPage = async ({ params: { orderId } }: CheckoutPageProps) => {
     variables: {
       id: orderId,
     },
+    context: {
+      fetchOptions: {
+        next: { revalidate: 0 },
+      },
+    },
   });
 
   // INFO: Potential errors are handled in the 'error.tsx' file
