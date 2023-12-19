@@ -1,10 +1,9 @@
+#import "../fragments/CheckoutFields.graphql"
+
 mutation CheckoutShippingAddressUpdate($id: ID!, $shippingAddress: AddressInput!) {
   checkoutShippingAddressUpdate(id: $id, shippingAddress: $shippingAddress) {
     checkout {
-      id
-      shippingMethods {
-        id
-      }
+      ...CheckoutFields
     }
     errors {
       field

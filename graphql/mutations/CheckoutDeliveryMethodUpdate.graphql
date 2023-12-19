@@ -1,5 +1,10 @@
+#import "../fragments/CheckoutFields.graphql"
+
 mutation CheckoutDeliveryMethodUpdate($deliveryMethodId: ID!, $id: ID!) {
   checkoutDeliveryMethodUpdate(deliveryMethodId: $deliveryMethodId, id: $id) {
+    checkout {
+      ...CheckoutFields
+    }
     errors {
       field
       message

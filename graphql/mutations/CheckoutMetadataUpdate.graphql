@@ -1,5 +1,13 @@
+#import "../fragments/CheckoutFields.graphql"
+
 mutation CheckoutMetadataUpdate($id: ID!, $input: [MetadataInput!]!) {
   updateMetadata(id: $id, input: $input) {
+    item {
+      metadata {
+        key
+        value
+      }
+    }
     errors {
       field
       message
