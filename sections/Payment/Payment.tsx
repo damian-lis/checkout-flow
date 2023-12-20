@@ -98,7 +98,10 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
         checkoutData.id
       );
 
-      if (!!updateBillingAddressData.errors?.length) return setGeneralErrorMsg("Something went wrong, try again later");
+      if (!!updateBillingAddressData.errors?.length)
+        return setGeneralErrorMsg(
+          `Something went wrong, try again later. Error: ${updateBillingAddressData.errors[0].message}`
+        );
 
       const checkoutBillingAddressUpdateData = (updateBillingAddressData?.data as CheckoutBillingAddressUpdateMutation)
         ?.checkoutBillingAddressUpdate;
@@ -126,11 +129,20 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
       const updatedCheckoutData = paymentCreateData?.data?.checkoutPaymentCreate?.checkout as CheckoutFieldsFragment;
 
       if (
-        !!paymentCreateData.errors?.length ||
+        paymentCreateData.errors?.length ||
         !paymentCreateData?.data?.checkoutPaymentCreate?.payment ||
+        paymentCreateData?.data?.checkoutPaymentCreate?.errors.length ||
         !updatedCheckoutData
       )
-        return setGeneralErrorMsg("Something went wrong, try again later");
+        return setGeneralErrorMsg(
+          `Something went wrong, try again later. Error: ${
+            paymentCreateData.errors?.length
+              ? paymentCreateData.errors[0].message
+              : paymentCreateData?.data?.checkoutPaymentCreate?.errors.length
+              ? paymentCreateData?.data?.checkoutPaymentCreate?.errors[0].message
+              : "Payment was not created."
+          }`
+        );
 
       const stringifiedCheckoutData = JSON.stringify({
         ...paymentCreateData.data.checkoutPaymentCreate.checkout,
@@ -143,12 +155,16 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
       });
 
       const checkoutCompleteData = await checkoutComplete(
-        [{ key: "checkoutData", value: stringifiedCheckoutData }],
+        [{ key: "checkoutData", value: stringifiedCheckoutData }], // 'stringifiedCheckoutData' is saved as metadata for order details
         checkoutData.id
       );
 
       if (!!checkoutCompleteData.errors?.length || !checkoutCompleteData.data?.checkoutComplete?.order?.id) {
-        return setGeneralErrorMsg("Something went wrong, try again later");
+        return setGeneralErrorMsg(
+          `Something went wrong, try again later. ${
+            checkoutCompleteData.errors ? `Error: ${checkoutCompleteData.errors}` : "No order created."
+          }`
+        );
       }
 
       router.push(`/order/${checkoutCompleteData.data.checkoutComplete?.order?.id}`);

@@ -62,7 +62,8 @@ export const ContactDetails = ({ checkoutData, onlyOverview }: ContactDetailsPro
       if (userEmail !== email) {
         const { data, errors } = await updateEmail(email, checkoutData.id);
 
-        if (!!errors?.length) return setGeneralErrorMsg("Something went wrong, try again later");
+        if (!!errors?.length)
+          return setGeneralErrorMsg(`Something went wrong, try again later. Error: ${errors[0].message}`);
 
         const errorField = data?.checkoutEmailUpdate?.errors[0]?.field;
         const errorMessage = data?.checkoutEmailUpdate?.errors[0]?.message;
@@ -78,7 +79,8 @@ export const ContactDetails = ({ checkoutData, onlyOverview }: ContactDetailsPro
       if (userName !== name) {
         const { data, errors } = await updateName(name, checkoutData.id);
 
-        if (!!errors?.length) return setGeneralErrorMsg("Something went wrong, try again later");
+        if (!!errors?.length)
+          return setGeneralErrorMsg(`Something went wrong, try again later. Error: ${errors[0].message}`);
 
         const errorField = data?.updateMetadata?.errors[0]?.field;
         const errorMessage = data?.updateMetadata?.errors[0]?.message;
@@ -90,6 +92,7 @@ export const ContactDetails = ({ checkoutData, onlyOverview }: ContactDetailsPro
           return;
         }
       }
+
       setIsExpanded(false);
     });
   };

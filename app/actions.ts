@@ -2,14 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 
-import { DEFAULT_CHANNEL } from "@/constants";
+import { PRODUCT_VARIANT_ID, SALEOR_CHANNEL } from "@/constants";
 import {
   AddressInput,
   CheckoutBillingAddressUpdateDocument,
   CheckoutCompleteDocument,
   CheckoutCreateDocument,
   CheckoutDeliveryMethodUpdateDocument,
-  CheckoutDocument,
   CheckoutEmailUpdateDocument,
   CheckoutMetadataUpdateDocument,
   CheckoutPaymentCreateDocument,
@@ -17,6 +16,12 @@ import {
   MetadataInput,
 } from "@/generated/graphql";
 import { getClient } from "@/lib/ApolloClient";
+
+// INFO: I've not found a way to revalidate the `/checkout/${checkoutId}` path without triggering the checkout query that fetches data from the server.
+// With the current implementation after executing a server action that has 'revalidatePath' the checkout query fetches data additionaly
+// that is not ideal and harms a little UX (delay getting checkout data).
+// The problem is realted to 'ApolloWrapper' that has own caching rules and doesn't respect NextJS 13 caching strategy.
+// Updating the Apollo cache manually by writting query doesn't work as well.
 
 export const updateEmail = async (email: string, checkoutId: string) => {
   const client = getClient();
@@ -154,11 +159,23 @@ export const checkoutComplete = async (metadata: MetadataInput[], checkoutId: st
 export const checkoutCreate = async () => {
   const client = getClient();
 
+  if (!PRODUCT_VARIANT_ID)
+    return {
+      data: null,
+      error: "No product variant id provided",
+    };
+
+  if (!SALEOR_CHANNEL)
+    return {
+      data: null,
+      error: "No saleor channel provided",
+    };
+
   const { data, errors } = await client.mutate({
     mutation: CheckoutCreateDocument,
     variables: {
-      channel: DEFAULT_CHANNEL,
-      lines: [{ quantity: 1, variantId: "UHJvZHVjdFZhcmlhbnQ6Mzg0" }],
+      channel: SALEOR_CHANNEL,
+      lines: [{ quantity: 1, variantId: PRODUCT_VARIANT_ID }],
     },
     context: {
       fetchOptions: {

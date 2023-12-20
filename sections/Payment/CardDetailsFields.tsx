@@ -2,6 +2,8 @@ import { ChangeEvent, useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { usePaymentInputs } from "react-payment-inputs";
 
+// INFO: I've not used the generic component for input fields because I had some problems with passing the 'react-payment-inputs' props down (a solution like 'forwardRef' didn't help).
+
 export const CardNumberField = ({ disabled }: { disabled: boolean }) => {
   const { meta, getCardNumberProps } = usePaymentInputs();
 

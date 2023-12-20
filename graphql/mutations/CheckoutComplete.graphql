@@ -7,11 +7,6 @@ mutation CheckoutComplete($checkoutId: ID, $metadata: [MetadataInput!]) {
     }
     order {
       id
-      token
-      metadata {
-        key
-        value
-      }
     }
   }
 }
