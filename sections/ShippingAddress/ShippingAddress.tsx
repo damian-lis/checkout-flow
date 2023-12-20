@@ -1,19 +1,14 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useTransition } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
 import { updateDeliveryMethod, updateShippingAddress } from "@/app/actions";
 import { Button, ErrorNotification, Overview } from "@/components";
 import { AddressFields } from "@/components/AddressFields";
 import { Section } from "@/components/Section";
-import {
-  AddressFieldsFragment,
-  CheckoutFieldsFragment,
-  CheckoutShippingAddressUpdate,
-  CheckoutShippingAddressUpdateMutation,
-} from "@/generated/graphql";
+import { AddressFieldsFragment, CheckoutFieldsFragment, CheckoutShippingAddressUpdate } from "@/generated/graphql";
 import { useValidationRules } from "@/hooks";
 import {
   addressDisplay,
@@ -32,7 +27,7 @@ interface ShippingAddressProps {
 }
 
 export const ShippingAddress = ({ checkoutData, onlyOverview = false }: ShippingAddressProps) => {
-  const [updating, setUpdating] = useState(false);
+  const [pending, startTransition] = useTransition();
 
   const shouldExpand = !!checkoutData.email && !checkoutData.shippingAddress;
   const [isExpanded, setIsExpanded] = useState(shouldExpand && !onlyOverview);
@@ -62,57 +57,69 @@ export const ShippingAddress = ({ checkoutData, onlyOverview = false }: Shipping
   }, [shouldExpand]);
 
   const handleSubmit = async (address: AddressSchema) => {
-    const { streetNumber, ...restAddress } = getDefaultFormat(address);
+    startTransition(async () => {
+      const { streetNumber, ...restAddress } = getDefaultFormat(address);
 
-    setUpdating(true);
-    const updateShippingAddressData = await updateShippingAddress(
-      {
-        ...restAddress,
-        metadata: [
-          {
-            key: "streetNumber",
-            value: String(streetNumber),
-          },
-          {
-            key: "countryArea",
-            value: restAddress.countryArea || "",
-          },
-        ],
-      },
-      checkoutData.id
-    );
-    setUpdating(false);
+      const updateShippingAddressData = await updateShippingAddress(
+        {
+          ...restAddress,
+          metadata: [
+            {
+              key: "streetNumber",
+              value: String(streetNumber),
+            },
+            {
+              key: "countryArea",
+              value: restAddress.countryArea || "",
+            },
+          ],
+        },
+        checkoutData.id
+      );
 
-    if (!!updateShippingAddressData.errors?.length) return setGeneralErrorMsg("Something went wrong, try again later");
+      if (!!updateShippingAddressData.errors?.length)
+        return setGeneralErrorMsg(
+          `Something went wrong, try again later. Error: ${updateShippingAddressData.errors[0].message}`
+        );
 
-    const data = (updateShippingAddressData?.data as CheckoutShippingAddressUpdateMutation)
-      ?.checkoutShippingAddressUpdate;
+      const data = updateShippingAddressData?.data?.checkoutShippingAddressUpdate;
 
-    const errorField = data?.errors[0]?.field as AddressFieldDefaultFormat;
-    const errorMessage = data?.errors[0]?.message;
+      const errorField = data?.errors[0]?.field as AddressFieldDefaultFormat;
+      const errorMessage = data?.errors[0]?.message;
 
-    if (errorField) {
-      methods.setError(mappedDefaultToAutocompletionFormat[errorField], {
-        message: errorMessage || undefined,
-      });
-      return;
-    }
+      if (errorField && errorMessage) {
+        methods.setError(mappedDefaultToAutocompletionFormat[errorField], {
+          message: errorMessage,
+        });
+        return;
+      }
 
-    const { shippingMethods, id } = (data as CheckoutShippingAddressUpdate)?.checkout || {};
-    if (!shippingMethods?.length || !id) return;
+      const { shippingMethods, id } = (data as CheckoutShippingAddressUpdate)?.checkout || {};
+      if (!shippingMethods?.length || !id) return setGeneralErrorMsg("No shipping methods to choose.");
 
-    setUpdating(true);
-    const { errors: updateDeliveryMethodGqlErrors } = await updateDeliveryMethod(shippingMethods[0].id, id);
-    setUpdating(false);
+      const { errors: updateDeliveryMethodGqlErrors, data: updateDeliveryMethodData } = await updateDeliveryMethod(
+        shippingMethods[0].id,
+        id
+      );
 
-    if (updateDeliveryMethodGqlErrors?.length) return setGeneralErrorMsg("Something went wrong, try again later");
+      if (
+        updateDeliveryMethodGqlErrors?.length ||
+        updateDeliveryMethodData?.checkoutDeliveryMethodUpdate?.errors?.length
+      )
+        return setGeneralErrorMsg(
+          `Something went wrong, try again later. Error: ${
+            updateDeliveryMethodGqlErrors?.[0].message ||
+            updateDeliveryMethodData?.checkoutDeliveryMethodUpdate?.errors[0].message
+          }`
+        );
 
-    setIsExpanded(false);
+      setIsExpanded(false);
+    });
   };
 
   return (
     <Section
-      disabled={onlyOverview || !checkoutData.email || updating}
+      disabled={onlyOverview || !checkoutData.email || pending}
       title="Shipping Address"
       onArrowClick={() => setIsExpanded(v => !v)}
       isArrowUp={isExpanded}
@@ -123,7 +130,7 @@ export const ShippingAddress = ({ checkoutData, onlyOverview = false }: Shipping
               <FormProvider {...methods}>
                 <form onSubmit={methods.handleSubmit(handleSubmit)}>
                   <AddressFields
-                    disabled={updating}
+                    disabled={pending}
                     countries={checkoutData.channel.countries}
                     countryAreaChoices={countryAreaChoices}
                     refetchValidationRules={refetchValidationRules}
@@ -134,7 +141,7 @@ export const ShippingAddress = ({ checkoutData, onlyOverview = false }: Shipping
                   <div className="mt-5 text-right">
                     <Button
                       fullWidth
-                      loading={updating}
+                      loading={pending}
                       disabled={!methods.formState.isDirty || !!Object.entries(methods.formState.errors).length}
                     >
                       Continue to payment
