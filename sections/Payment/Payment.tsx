@@ -57,10 +57,7 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
 
   const [generalErrorMsg, setGeneralErrorMsg] = useState("");
 
-  const shippingAddress = useMemo(
-    () => getAddressAutocompletionFormat(checkoutData.shippingAddress as AddressFieldsFragment),
-    [checkoutData]
-  );
+  const shippingAddress = useMemo(() => getAddressAutocompletionFormat(checkoutData.shippingAddress), [checkoutData]);
 
   const { validationRules, countryAreaChoices, refetchValidationRules } = useValidationRules(
     showAddressForm ? defaultBillingCountry : shippingAddress?.country,
@@ -103,8 +100,7 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
           `Something went wrong, try again later. Error: ${updateBillingAddressData.errors[0].message}`
         );
 
-      const checkoutBillingAddressUpdateData = (updateBillingAddressData?.data as CheckoutBillingAddressUpdateMutation)
-        ?.checkoutBillingAddressUpdate;
+      const checkoutBillingAddressUpdateData = updateBillingAddressData?.data?.checkoutBillingAddressUpdate;
 
       const errorField = checkoutBillingAddressUpdateData?.errors[0]?.field as AddressFieldDefaultFormat;
       const errorMessage = checkoutBillingAddressUpdateData?.errors[0]?.message;
@@ -126,7 +122,7 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
         checkoutData.id
       );
 
-      const updatedCheckoutData = paymentCreateData?.data?.checkoutPaymentCreate?.checkout as CheckoutFieldsFragment;
+      const updatedCheckoutData = paymentCreateData?.data?.checkoutPaymentCreate?.checkout;
 
       if (
         paymentCreateData.errors?.length ||
@@ -147,10 +143,9 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
       const stringifiedCheckoutData = JSON.stringify({
         ...paymentCreateData.data.checkoutPaymentCreate.checkout,
         channel: {
-          countries: [
-            (updatedCheckoutData.shippingAddress as AddressFieldsFragment)?.country,
-            (updatedCheckoutData.billingAddress as AddressFieldsFragment)?.country,
-          ].filter(Boolean),
+          countries: [updatedCheckoutData.shippingAddress?.country, updatedCheckoutData.billingAddress?.country].filter(
+            Boolean
+          ),
         },
       });
 
@@ -253,10 +248,7 @@ export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = fals
               <>
                 <h2 className="mt-6 text-lg font-normal">Billing Address</h2>
                 <Overview>
-                  {addressDisplay(
-                    checkoutData.billingAddress as AddressFieldsFragment,
-                    getCountriesToDisplay(checkoutData.channel.countries)
-                  )}
+                  {addressDisplay(checkoutData.billingAddress, getCountriesToDisplay(checkoutData.channel.countries))}
                 </Overview>
               </>
             )}

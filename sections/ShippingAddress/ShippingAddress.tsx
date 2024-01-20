@@ -34,10 +34,7 @@ export const ShippingAddress = ({ checkoutData, onlyOverview = false }: Shipping
 
   const [generalErrorMsg, setGeneralErrorMsg] = useState("");
 
-  const shippingAddress = useMemo(
-    () => getAddressAutocompletionFormat(checkoutData.shippingAddress as AddressFieldsFragment),
-    [checkoutData]
-  );
+  const shippingAddress = useMemo(() => getAddressAutocompletionFormat(checkoutData.shippingAddress), [checkoutData]);
 
   const { validationRules, countryAreaChoices, refetchValidationRules } = useValidationRules(shippingAddress.country, {
     skip: onlyOverview || !checkoutData.email,
@@ -94,7 +91,7 @@ export const ShippingAddress = ({ checkoutData, onlyOverview = false }: Shipping
         return;
       }
 
-      const { shippingMethods, id } = (data as CheckoutShippingAddressUpdate)?.checkout || {};
+      const { shippingMethods, id } = data?.checkout || {};
       if (!shippingMethods?.length || !id) return setGeneralErrorMsg("No shipping methods to choose.");
 
       const { errors: updateDeliveryMethodGqlErrors, data: updateDeliveryMethodData } = await updateDeliveryMethod(
@@ -153,10 +150,7 @@ export const ShippingAddress = ({ checkoutData, onlyOverview = false }: Shipping
           ) : (
             checkoutData.shippingAddress && (
               <Overview>
-                {addressDisplay(
-                  checkoutData.shippingAddress as AddressFieldsFragment,
-                  getCountriesToDisplay(checkoutData.channel.countries)
-                )}
+                {addressDisplay(checkoutData.shippingAddress, getCountriesToDisplay(checkoutData.channel.countries))}
               </Overview>
             )
           )}

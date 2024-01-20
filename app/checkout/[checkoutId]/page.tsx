@@ -1,6 +1,6 @@
 import React from "react";
 
-import { CheckoutDocument, CheckoutFieldsFragment } from "@/generated/graphql";
+import { CheckoutDocument } from "@/generated/graphql";
 import { getClient } from "@/lib/ApolloClient";
 import { ContactDetails, Payment, ShippingAddress, Summary } from "@/sections";
 
@@ -25,7 +25,9 @@ const CheckoutPage = async ({ params: { checkoutId } }: CheckoutPageProps) => {
     },
   });
 
-  const checkoutData = data.checkout as CheckoutFieldsFragment;
+  // INFO: Potential errors are handled in the 'error.tsx' file
+
+  const checkoutData = data.checkout!;
 
   return (
     <main className="mx-auto mt-40 w-full max-w-[350px] md:max-w-[830px]">
