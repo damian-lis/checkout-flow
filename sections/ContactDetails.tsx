@@ -1,13 +1,14 @@
 "use client";
 
+import { useMutation } from "@apollo/client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import React, { useEffect, useState, useTransition } from "react";
+import React, { useContext, useEffect, useState, useTransition } from "react";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { z } from "zod";
 
-import { updateEmail, updateName } from "@/app/actions";
+import { CheckoutContext } from "@/components/CheckoutContext/CheckoutContext";
 import { Section } from "@/components/Section";
-import { CheckoutFieldsFragment } from "@/generated/graphql";
+import { CheckoutEmailUpdateDocument, CheckoutMetadataUpdateDocument } from "@/generated/graphql";
 
 import { Button, ErrorNotification, InputField, Overview } from "../components";
 
@@ -23,11 +24,14 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 interface ContactDetailsProps {
-  checkoutData: CheckoutFieldsFragment;
   onlyOverview?: boolean;
 }
 
-export const ContactDetails = ({ checkoutData, onlyOverview }: ContactDetailsProps) => {
+export const ContactDetails = ({ onlyOverview }: ContactDetailsProps) => {
+  const { checkoutData, setCheckoutData } = useContext(CheckoutContext)!; //  I've added '!' since the 'checkoutData' object is available here for sure (see checking in the page component)
+  const [updateName] = useMutation(CheckoutMetadataUpdateDocument);
+  const [updateEmail] = useMutation(CheckoutEmailUpdateDocument);
+
   const [pending, startTransition] = useTransition();
 
   const userName = checkoutData?.metadata.find(({ key }) => key === "name")?.value;
@@ -59,37 +63,48 @@ export const ContactDetails = ({ checkoutData, onlyOverview }: ContactDetailsPro
 
   const onSubmit: SubmitHandler<FormValues> = async ({ name, email }) => {
     startTransition(async () => {
-      if (userEmail !== email) {
-        const { data, errors } = await updateEmail(email, checkoutData.id);
+      const { data: nameData, errors: nameErrors } = await updateName({
+        variables: {
+          input: [
+            {
+              key: "name",
+              value: name,
+            },
+          ],
+          id: checkoutData.id,
+        },
+      });
 
-        if (!!errors?.length) return setGeneralErrorMsg("Something went wrong, try again later");
+      if (!!nameErrors?.length) return setGeneralErrorMsg("Something went wrong, try again later");
 
-        const errorField = data?.checkoutEmailUpdate?.errors[0]?.field;
-        const errorMessage = data?.checkoutEmailUpdate?.errors[0]?.message;
+      const nameErrorField = nameData?.updateMetadata?.errors[0]?.field;
+      const nameErrorMessage = nameData?.updateMetadata?.errors[0]?.message;
 
-        if (errorField === "email") {
-          methods.setError(errorField, {
-            message: errorMessage || undefined,
-          });
-          return;
-        }
+      if (nameErrorField === "name") {
+        methods.setError(nameErrorField, {
+          message: nameErrorMessage || undefined,
+        });
+        return;
       }
+      const { data: emailData, errors: emailErrors } = await updateEmail({
+        variables: {
+          email,
+          id: checkoutData.id,
+        },
+      });
 
-      if (userName !== name) {
-        const { data, errors } = await updateName(name, checkoutData.id);
+      if (!!emailErrors?.length) return setGeneralErrorMsg("Something went wrong, try again later");
 
-        if (!!errors?.length) return setGeneralErrorMsg("Something went wrong, try again later");
+      const emailErrorField = emailData?.checkoutEmailUpdate?.errors[0]?.field;
+      const emailErrorMessage = emailData?.checkoutEmailUpdate?.errors[0]?.message;
 
-        const errorField = data?.updateMetadata?.errors[0]?.field;
-        const errorMessage = data?.updateMetadata?.errors[0]?.message;
-
-        if (errorField === "name") {
-          methods.setError(errorField, {
-            message: errorMessage || undefined,
-          });
-          return;
-        }
+      if (emailErrorField === "email") {
+        methods.setError(emailErrorField, {
+          message: emailErrorMessage || undefined,
+        });
+        return;
       }
+      setCheckoutData(emailData?.checkoutEmailUpdate?.checkout!);
       setIsExpanded(false);
     });
   };

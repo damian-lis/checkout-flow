@@ -2,18 +2,14 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useMemo, useState, useTransition } from "react";
+import React, { useContext, useEffect, useMemo, useState, useTransition } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
 import { checkoutComplete, paymentCreate, updateBillingAddress } from "@/app/actions";
 import { AddressFields, Button, ErrorNotification, Overview, SelectField } from "@/components";
+import { CheckoutContext } from "@/components/CheckoutContext";
 import { Section } from "@/components/Section";
-import {
-  AddressFieldsFragment,
-  CheckoutBillingAddressUpdateMutation,
-  CheckoutFieldsFragment,
-  CountryCode,
-} from "@/generated/graphql";
+import { CountryCode } from "@/generated/graphql";
 import { useValidationRules } from "@/hooks";
 import {
   addressDisplay,
@@ -37,12 +33,12 @@ const mappedPaymentGateways: Record<string, string> = {
 const selectedPaymentGatewayId = "mirumee.payments.dummy";
 
 interface PaymentProps {
-  checkoutData: CheckoutFieldsFragment;
   onlyOverview?: boolean;
   orderPaymentGateway?: string;
 }
 
-export const Payment = ({ checkoutData, orderPaymentGateway, onlyOverview = false }: PaymentProps) => {
+export const Payment = ({ orderPaymentGateway, onlyOverview = false }: PaymentProps) => {
+  const { checkoutData } = useContext(CheckoutContext)!; //  I've added '!' since the 'checkoutData' object is available here for sure (see checking in the page component)
   const router = useRouter();
 
   const [pending, startTransition] = useTransition();

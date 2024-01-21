@@ -1,5 +1,7 @@
 import React from "react";
 
+import { ErrorPage } from "@/components";
+import { CheckoutProvider } from "@/components/CheckoutContext";
 import { CheckoutDocument } from "@/generated/graphql";
 import { getClient } from "@/lib/ApolloClient";
 import { ContactDetails, Payment, ShippingAddress, Summary } from "@/sections";
@@ -27,18 +29,22 @@ const CheckoutPage = async ({ params: { checkoutId } }: CheckoutPageProps) => {
 
   // INFO: Potential errors are handled in the 'error.tsx' file
 
-  const checkoutData = data.checkout!;
+  const checkoutData = data.checkout;
+
+  if (!checkoutData) return <ErrorPage title="Something went wrong" />;
 
   return (
     <main className="mx-auto mt-40 w-full max-w-[350px] md:max-w-[830px]">
       <h1 className="mb-12 w-full text-4xl font-semibold text-normalGray md:mb-14">Checkout</h1>
       <div className="flex flex-col-reverse items-center justify-between md:flex-row md:items-start">
-        <div className="w-full">
-          <ContactDetails checkoutData={checkoutData} />
-          <ShippingAddress checkoutData={checkoutData} />
-          <Payment checkoutData={checkoutData} />
-        </div>
-        <Summary checkoutData={checkoutData} />
+        <CheckoutProvider checkoutData={checkoutData}>
+          <div className="w-full">
+            <ContactDetails />
+            <ShippingAddress />
+            <Payment />
+          </div>
+          <Summary />
+        </CheckoutProvider>
       </div>
     </main>
   );

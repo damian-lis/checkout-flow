@@ -1,14 +1,15 @@
 "use client";
 
+import { useMutation } from "@apollo/client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import React, { useEffect, useMemo, useState, useTransition } from "react";
+import React, { useContext, useEffect, useMemo, useState, useTransition } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
-import { updateDeliveryMethod, updateShippingAddress } from "@/app/actions";
 import { Button, ErrorNotification, Overview } from "@/components";
 import { AddressFields } from "@/components/AddressFields";
+import { CheckoutContext } from "@/components/CheckoutContext";
 import { Section } from "@/components/Section";
-import { AddressFieldsFragment, CheckoutFieldsFragment, CheckoutShippingAddressUpdate } from "@/generated/graphql";
+import { CheckoutDeliveryMethodUpdateDocument, CheckoutShippingAddressUpdateDocument } from "@/generated/graphql";
 import { useValidationRules } from "@/hooks";
 import {
   addressDisplay,
@@ -22,12 +23,14 @@ import {
 import { AddressSchema, createSchema } from "./schema";
 
 interface ShippingAddressProps {
-  checkoutData: CheckoutFieldsFragment;
   onlyOverview?: boolean;
 }
 
-export const ShippingAddress = ({ checkoutData, onlyOverview = false }: ShippingAddressProps) => {
+export const ShippingAddress = ({ onlyOverview = false }: ShippingAddressProps) => {
   const [pending, startTransition] = useTransition();
+  const { checkoutData, setCheckoutData } = useContext(CheckoutContext)!; //  I've added '!' since the 'checkoutData' object is available here for sure (see checking in the page component)
+  const [updateShippingAddress] = useMutation(CheckoutShippingAddressUpdateDocument);
+  const [updateDeliveryMethod] = useMutation(CheckoutDeliveryMethodUpdateDocument);
 
   const shouldExpand = !!checkoutData.email && !checkoutData.shippingAddress;
   const [isExpanded, setIsExpanded] = useState(shouldExpand && !onlyOverview);
@@ -57,22 +60,24 @@ export const ShippingAddress = ({ checkoutData, onlyOverview = false }: Shipping
     startTransition(async () => {
       const { streetNumber, ...restAddress } = getDefaultFormat(address);
 
-      const updateShippingAddressData = await updateShippingAddress(
-        {
-          ...restAddress,
-          metadata: [
-            {
-              key: "streetNumber",
-              value: String(streetNumber),
-            },
-            {
-              key: "countryArea",
-              value: restAddress.countryArea || "",
-            },
-          ],
+      const updateShippingAddressData = await updateShippingAddress({
+        variables: {
+          shippingAddress: {
+            ...restAddress,
+            metadata: [
+              {
+                key: "streetNumber",
+                value: String(streetNumber),
+              },
+              {
+                key: "countryArea",
+                value: restAddress.countryArea || "",
+              },
+            ],
+          },
+          id: checkoutData.id,
         },
-        checkoutData.id
-      );
+      });
 
       if (!!updateShippingAddressData.errors?.length)
         return setGeneralErrorMsg(
@@ -94,10 +99,12 @@ export const ShippingAddress = ({ checkoutData, onlyOverview = false }: Shipping
       const { shippingMethods, id } = data?.checkout || {};
       if (!shippingMethods?.length || !id) return setGeneralErrorMsg("No shipping methods to choose.");
 
-      const { errors: updateDeliveryMethodGqlErrors, data: updateDeliveryMethodData } = await updateDeliveryMethod(
-        shippingMethods[0].id,
-        id
-      );
+      const { errors: updateDeliveryMethodGqlErrors, data: updateDeliveryMethodData } = await updateDeliveryMethod({
+        variables: {
+          deliveryMethodId: shippingMethods[0].id,
+          id,
+        },
+      });
 
       if (
         updateDeliveryMethodGqlErrors?.length ||
@@ -110,6 +117,7 @@ export const ShippingAddress = ({ checkoutData, onlyOverview = false }: Shipping
           }`
         );
 
+      setCheckoutData(updateDeliveryMethodData?.checkoutDeliveryMethodUpdate?.checkout!);
       setIsExpanded(false);
     });
   };

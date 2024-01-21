@@ -4,20 +4,21 @@ import classNames from "classnames";
 import getSymbolFromCurrency from "currency-symbol-map";
 import { format, parseISO } from "date-fns";
 import Image from "next/image";
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 
 import { Overview } from "@/components";
+import { CheckoutContext } from "@/components/CheckoutContext";
 import { Section } from "@/components/Section";
-import { CheckoutFieldsFragment, Money } from "@/generated/graphql";
+import { Money } from "@/generated/graphql";
 
 interface SummaryProps {
-  checkoutData: CheckoutFieldsFragment;
   orderNumber?: string;
   orderCreatedDate?: string;
 }
 
-export const Summary = ({ checkoutData, orderNumber, orderCreatedDate }: SummaryProps) => {
+export const Summary = ({ orderNumber, orderCreatedDate }: SummaryProps) => {
   const [isOpen, setIsOpen] = useState(true);
+  const { checkoutData } = useContext(CheckoutContext)!; // I've added '!' since the 'checkoutData' object is available here for sure (see checking in the page component)
 
   const quantity = checkoutData.lines[0].quantity;
   const productPrice = checkoutData.lines[0].totalPrice.net;
