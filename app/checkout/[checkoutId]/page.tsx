@@ -31,7 +31,7 @@ const CheckoutPage = async ({ params: { checkoutId } }: CheckoutPageProps) => {
 
   const checkoutData = data.checkout;
 
-  if (!checkoutData) return <ErrorPage title="Something went wrong" />;
+  if (!checkoutData) return <ErrorPage title="No checkout data found" />;
 
   return (
     <main className="mx-auto mt-40 w-full max-w-[350px] md:max-w-[830px]">

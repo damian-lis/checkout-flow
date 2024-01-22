@@ -29,7 +29,7 @@ const OrderPage = async ({ params: { orderId } }: CheckoutPageProps) => {
     ? (JSON.parse(stringifiedCheckoutData) as CheckoutFieldsFragment)
     : undefined;
 
-  if (!checkoutData) return <ErrorPage title="Something went wrong" />;
+  if (!checkoutData || !data.order) return <ErrorPage title="No order data found" />;
 
   return (
     <main className="mx-auto mt-40 w-full max-w-[350px] md:max-w-[830px]">
@@ -39,9 +39,9 @@ const OrderPage = async ({ params: { orderId } }: CheckoutPageProps) => {
           <div className="w-full">
             <ContactDetails onlyOverview />
             <ShippingAddress onlyOverview />
-            <Payment onlyOverview orderPaymentGateway={data.order?.payments[0].gateway!} />
+            <Payment onlyOverview orderPaymentGateway={data.order.payments[0].gateway} />
           </div>
-          <Summary orderNumber={data.order?.number!} orderCreatedDate={data.order?.created} />
+          <Summary orderNumber={data.order.number} orderCreatedDate={data.order.created} />
         </CheckoutProvider>
       </div>
     </main>
